@@ -1,0 +1,42 @@
+// ============================================================
+// ai-article-pipeline — 统一导出
+// ============================================================
+
+// 类型
+export type {
+  Seed,
+  SeedInput,
+  GeneratedArticle,
+  ContentBlock,
+  FaqItem,
+  LinkItem,
+  InsertResult,
+  InsertResultItem,
+  SafetyHit,
+  SafetyResult,
+  SafetyRule,
+  AiMessage,
+  AiClient,
+  AiConfig,
+  PipelineConfig,
+  PipelineRunResult,
+  TopicSuggestion,
+  RunLogInput,
+} from './types.js'
+
+// 提示词
+export { dateContext, aiSystemPrompt, aiSuggestPrompt } from './prompts.js'
+
+// 工具函数
+export { extractJson, safeJson, normalizeJson, firstImageOf } from './utils.js'
+
+// 内容安全
+export { scanText, checkArticleSafety, replaceViolatingWords } from './content-safety.js'
+
+// 管线
+export { createPipeline } from './pipeline.js'
+export type { Pipeline, PipelineDB } from './pipeline.js'
+
+// 执行器
+export { execute } from './executor.js'
+export type { ExecutorConfig, ExecutorResult } from './executor.js'

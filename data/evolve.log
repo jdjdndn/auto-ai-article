@@ -1,0 +1,144 @@
+{"level":30,"time":1790687367510,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"startup","version":"2.0.0","target":"claude","msg":"Claude Evolve starting"}
+{"level":30,"time":1790687367511,"pid":30348,"hostname":"DESKTOP-2E80QTB","cli":"global-npm-windows","path":"C:/Program Files/nodejs/node_modules/@anthropic-ai/claude-code/bin/claude.exe","interceptMode":"proxy","msg":"CLI resolved"}
+{"level":30,"time":1790687367513,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"prompt-watcher-started","systemDir":"E:\\code\\claude-evolve\\prompts\\system","userDir":"E:\\code\\claude-evolve\\prompts\\user","msg":"Prompt watcher started"}
+{"level":30,"time":1790687367514,"pid":30348,"hostname":"DESKTOP-2E80QTB","msg":"[kg] 知识图谱初始化, session=mp0voa"}
+{"level":30,"time":1790687367514,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"session-init","msg":"Session initialized"}
+{"level":30,"time":1790687367515,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"api-context-settings-loaded","baseUrl":"https://token-plan-cn.xiaomimimo.com/anthropic","tokenHint":"Bearer tp-ctmqn***","model":"mimo-v2.5[1m]","msg":"API上下文从Claude Code settings加载"}
+{"level":30,"time":1790687367515,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"session-init-done","turnTasks":0,"msg":"会话初始化完成"}
+{"level":30,"time":1790687367516,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-upstream","upstream":"https://token-plan-cn.xiaomimimo.com/anthropic","msg":"Proxy upstream: https://token-plan-cn.xiaomimimo.com/anthropic"}
+{"level":30,"time":1790687367519,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-start","port":26030,"msg":"Proxy server started"}
+{"level":30,"time":1790687367531,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"startup-dumps","count":31,"msg":"发现 31 个未处理的 dump 文件"}
+{"level":30,"time":1790687370813,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/api/hello","status":404,"msg":"Proxied"}
+{"level":30,"time":1790687589595,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790687589681,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790687623083,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790687677724,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790687682105,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790687770320,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790687770322,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790687776565,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790687776612,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790687783707,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790687783767,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790687788562,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790687788585,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790687849538,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790687849542,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790687877998,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790687973417,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688012725,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688150327,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688170059,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688170191,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688205482,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688205622,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688230213,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688230238,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688312786,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688312834,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688375325,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688375556,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688394910,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688395052,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688397587,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688401350,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688402997,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688405517,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688407805,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688407906,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688412194,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688412377,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688417021,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688417066,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688433261,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688433468,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688439780,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688440883,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688450572,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688450763,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688462761,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688522910,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688564996,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688565060,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688597684,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688597733,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688648938,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688648986,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688655749,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688655969,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688657828,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688659919,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688664380,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688664840,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688668860,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688668939,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688686771,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688686842,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688699253,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688699482,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688710340,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688734860,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688742715,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688742791,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688753784,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688753863,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688803914,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688804134,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688811471,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688811505,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688814445,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688816428,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688821600,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688821674,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688824063,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688826066,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688835147,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688845992,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688859228,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688880640,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688893963,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688894067,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688907698,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688907983,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688923749,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688924019,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688941798,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688941925,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790688971999,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790688972004,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790689000431,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790689000438,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790689020213,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790689020528,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790689231158,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790689231234,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790689242063,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790689242280,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790689303005,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790689303060,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790689307529,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790689307741,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790689325093,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790689325132,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790689327286,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790689327366,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790689336233,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790689336387,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790689339433,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790689341643,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790689352602,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790689353915,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790689369747,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790689371072,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790689380915,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790689382209,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790689390948,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790689391190,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790689413863,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790689413921,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790689422700,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790689447173,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790689509258,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790689509326,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
+{"level":30,"time":1790689543668,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"proxy-request","url":"/v1/messages?beta=true","status":200,"msg":"Proxied"}
+{"level":30,"time":1790689543729,"pid":30348,"hostname":"DESKTOP-2E80QTB","event":"filter-request","changes":["redact_patterns: 1处"],"msg":"请求过滤: redact_patterns: 1处"}
