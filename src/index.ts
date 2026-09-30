@@ -27,6 +27,10 @@ export type {
 // 提示词
 export { dateContext, aiSystemPrompt, aiSuggestPrompt } from './prompts.js'
 
+// 数据库 Schema
+export { articles, seeds, runLogs } from './schema.js'
+export type { ArticleRow, SeedRow, RunLogRow } from './schema.js'
+
 // 工具函数
 export { extractJson, safeJson, normalizeJson, firstImageOf } from './utils.js'
 

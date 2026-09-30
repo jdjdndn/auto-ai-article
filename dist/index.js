@@ -1,0 +1,33 @@
+"use strict";
+// ============================================================
+// ai-article-pipeline — 统一导出
+// ============================================================
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.execute = exports.createPipeline = exports.replaceViolatingWords = exports.checkArticleSafety = exports.scanText = exports.firstImageOf = exports.normalizeJson = exports.safeJson = exports.extractJson = exports.runLogs = exports.seeds = exports.articles = exports.aiSuggestPrompt = exports.aiSystemPrompt = exports.dateContext = void 0;
+// 提示词
+var prompts_js_1 = require("./prompts.js");
+Object.defineProperty(exports, "dateContext", { enumerable: true, get: function () { return prompts_js_1.dateContext; } });
+Object.defineProperty(exports, "aiSystemPrompt", { enumerable: true, get: function () { return prompts_js_1.aiSystemPrompt; } });
+Object.defineProperty(exports, "aiSuggestPrompt", { enumerable: true, get: function () { return prompts_js_1.aiSuggestPrompt; } });
+// 数据库 Schema
+var schema_js_1 = require("./schema.js");
+Object.defineProperty(exports, "articles", { enumerable: true, get: function () { return schema_js_1.articles; } });
+Object.defineProperty(exports, "seeds", { enumerable: true, get: function () { return schema_js_1.seeds; } });
+Object.defineProperty(exports, "runLogs", { enumerable: true, get: function () { return schema_js_1.runLogs; } });
+// 工具函数
+var utils_js_1 = require("./utils.js");
+Object.defineProperty(exports, "extractJson", { enumerable: true, get: function () { return utils_js_1.extractJson; } });
+Object.defineProperty(exports, "safeJson", { enumerable: true, get: function () { return utils_js_1.safeJson; } });
+Object.defineProperty(exports, "normalizeJson", { enumerable: true, get: function () { return utils_js_1.normalizeJson; } });
+Object.defineProperty(exports, "firstImageOf", { enumerable: true, get: function () { return utils_js_1.firstImageOf; } });
+// 内容安全
+var content_safety_js_1 = require("./content-safety.js");
+Object.defineProperty(exports, "scanText", { enumerable: true, get: function () { return content_safety_js_1.scanText; } });
+Object.defineProperty(exports, "checkArticleSafety", { enumerable: true, get: function () { return content_safety_js_1.checkArticleSafety; } });
+Object.defineProperty(exports, "replaceViolatingWords", { enumerable: true, get: function () { return content_safety_js_1.replaceViolatingWords; } });
+// 管线
+var pipeline_js_1 = require("./pipeline.js");
+Object.defineProperty(exports, "createPipeline", { enumerable: true, get: function () { return pipeline_js_1.createPipeline; } });
+// 执行器
+var executor_js_1 = require("./executor.js");
+Object.defineProperty(exports, "execute", { enumerable: true, get: function () { return executor_js_1.execute; } });

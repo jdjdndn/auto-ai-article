@@ -2,6 +2,32 @@
 
 AI 自动文章生成管线 — 从素材到发布的完整流程，支持任意数据库后端。
 
+## 安装
+
+### 方式一：从 GitHub 安装（推荐）
+
+```bash
+# 直接从 GitHub 安装
+npm install github:jdjdndn/auto-ai-article
+
+# 或者指定版本/分支
+npm install github:jdjdndn/auto-ai-article#main
+```
+
+### 方式二：克隆后本地使用
+
+```bash
+# 克隆仓库
+git clone https://github.com/jdjdndn/auto-ai-article.git
+cd auto-ai-article
+
+# 安装依赖
+npm install
+
+# 构建
+npm run build
+```
+
 ## 功能
 
 - **AI 选题**：素材池不足时自动策划选题（贴合时令/节日），失败自动重试
@@ -14,12 +40,6 @@ AI 自动文章生成管线 — 从素材到发布的完整流程，支持任意
 - **本地网关支持**：自动检测 localhost 网关，离线时云端兜底
 - **防重复发布**：检查今日已有成功记录，避免并发双跑
 - **JS/TS 兼容**：CommonJS 输出，`require()` / `import` 均可使用
-
-## 安装
-
-```bash
-npm install ai-article-pipeline
-```
 
 ## 快速开始
 
