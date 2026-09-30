@@ -8,3 +8,5 @@ export { createPipeline } from './pipeline.js';
 export type { Pipeline, PipelineDB } from './pipeline.js';
 export { execute } from './executor.js';
 export type { ExecutorConfig, ExecutorResult } from './executor.js';
+export { ArticleScheduler, startScheduler } from './scheduler.js';
+export type { SchedulerConfig } from './scheduler.js';

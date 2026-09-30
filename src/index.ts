@@ -44,3 +44,7 @@ export type { Pipeline, PipelineDB } from './pipeline.js'
 // 执行器
 export { execute } from './executor.js'
 export type { ExecutorConfig, ExecutorResult } from './executor.js'
+
+// 定时调度器（Cloudflare Durable Objects Alarms）
+export { ArticleScheduler, startScheduler } from './scheduler.js'
+export type { SchedulerConfig } from './scheduler.js'

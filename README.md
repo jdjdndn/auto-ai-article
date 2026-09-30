@@ -15,6 +15,7 @@ AI 自动文章生成管线 — 从素材到发布的完整流程，支持任意
 - **防重复发布**：检查今日已有成功记录，避免并发双跑
 - **JS/TS 兼容**：CommonJS 输出，`require()` / `import` 均可使用
 - **数据库 Schema**：导出 Drizzle ORM 表定义，所有子站共用
+- **定时调度**：基于 Cloudflare Durable Objects Alarms，每天固定时间触发，无需 cron triggers
 
 ---
 
@@ -54,6 +55,54 @@ npm install ../auto-ai-article
 ---
 
 ## 快速开始
+
+### 0. 定时调度（推荐方式）
+
+使用 Cloudflare Durable Objects Alarms，每天固定时间触发，无需 cron triggers：
+
+```typescript
+// worker 入口文件
+import { ArticleScheduler, startScheduler } from 'ai-article-pipeline'
+
+// 导出 DO class（用户不用自己写）
+export { ArticleScheduler }
+
+export default {
+  async fetch(request: Request, env: any) {
+    // 启动调度器（每天 08:00 触发）
+    const scheduler = startScheduler(env, { time: '08:00' })
+    const result = await scheduler.start()
+
+    return Response.json({ ok: true, ...result })
+  },
+}
+```
+
+**wrangler.jsonc 配置**：
+
+```json
+{
+  "durable_objects": {
+    "bindings": [
+      { "name": "ARTICLE_SCHEDULER", "class_name": "ArticleScheduler" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_classes": ["ArticleScheduler"] }
+  ]
+}
+```
+
+**首次部署后调用一次启动**：
+
+```bash
+curl -X POST https://your-domain.com/api/cron
+# 返回: { "ok": true, "scheduled": "2026-10-01T08:00:00.000Z" }
+```
+
+之后每天 08:00 自动触发，无需任何外部服务。
+
+---
 
 ### 1. 基础用法：createPipeline
 

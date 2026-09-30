@@ -3,7 +3,7 @@
 // ai-article-pipeline — 统一导出
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.execute = exports.createPipeline = exports.replaceViolatingWords = exports.checkArticleSafety = exports.scanText = exports.firstImageOf = exports.normalizeJson = exports.safeJson = exports.extractJson = exports.runLogs = exports.seeds = exports.articles = exports.aiSuggestPrompt = exports.aiSystemPrompt = exports.dateContext = void 0;
+exports.startScheduler = exports.ArticleScheduler = exports.execute = exports.createPipeline = exports.replaceViolatingWords = exports.checkArticleSafety = exports.scanText = exports.firstImageOf = exports.normalizeJson = exports.safeJson = exports.extractJson = exports.runLogs = exports.seeds = exports.articles = exports.aiSuggestPrompt = exports.aiSystemPrompt = exports.dateContext = void 0;
 // 提示词
 var prompts_js_1 = require("./prompts.js");
 Object.defineProperty(exports, "dateContext", { enumerable: true, get: function () { return prompts_js_1.dateContext; } });
@@ -31,3 +31,7 @@ Object.defineProperty(exports, "createPipeline", { enumerable: true, get: functi
 // 执行器
 var executor_js_1 = require("./executor.js");
 Object.defineProperty(exports, "execute", { enumerable: true, get: function () { return executor_js_1.execute; } });
+// 定时调度器（Cloudflare Durable Objects Alarms）
+var scheduler_js_1 = require("./scheduler.js");
+Object.defineProperty(exports, "ArticleScheduler", { enumerable: true, get: function () { return scheduler_js_1.ArticleScheduler; } });
+Object.defineProperty(exports, "startScheduler", { enumerable: true, get: function () { return scheduler_js_1.startScheduler; } });
