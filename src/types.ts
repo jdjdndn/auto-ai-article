@@ -123,6 +123,15 @@ export interface AiConfig {
   model?: string
   /** 最大 token 数（默认 4096） */
   maxTokens?: number
+  /** Cloudflare Workers AI 配置（启用降级，优先级高于 baseUrl/apiKey） */
+  cloudflare?: {
+    apiToken: string
+    accountId: string
+    baseUrl?: string
+    maxDepth?: number
+    timeoutMs?: number
+    retriesPerModel?: number
+  }
 }
 
 // —— 管线配置 ——

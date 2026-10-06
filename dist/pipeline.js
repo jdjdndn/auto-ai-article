@@ -7,6 +7,7 @@ exports.createPipeline = createPipeline;
 const prompts_js_1 = require("./prompts.js");
 const utils_js_1 = require("./utils.js");
 const content_safety_js_1 = require("./content-safety.js");
+const ai_fallback_js_1 = require("./ai-fallback.js");
 // —— 占位 URL 清洗 ——
 const PLACEHOLDER_URL = /(^|[/.@])(example\.(com|org|net)|test\.com|yourlink\.com|yourdomain\.com|your-url\.com|sample\.com|domain\.com|website\.com|lorem\.ipsum|placeholder\.com)/i;
 function cleanUrl(u) {
@@ -81,7 +82,23 @@ async function withRetry(fn, retries, label) {
 }
 function createPipeline(db, config = {}) {
     const target = config.target ?? 3;
-    const aiClient = config.ai?.client ?? createDefaultAiClient(config.ai ?? {});
+    // AI 客户端选择逻辑：
+    // 1. config.ai.client → 直接使用（最高优先级）
+    // 2. config.ai.cloudflare → 使用降级客户端（额度用完自动切换）
+    // 3. config.ai.baseUrl/apiKey → 使用 OpenAI 兼容客户端
+    // 4. 默认 → OpenAI 兼容客户端
+    let aiClient;
+    if (config.ai?.client) {
+        aiClient = config.ai.client;
+    }
+    else if (config.ai?.cloudflare) {
+        aiClient = (0, ai_fallback_js_1.createAiClient)({
+            cloudflare: config.ai.cloudflare,
+        });
+    }
+    else {
+        aiClient = createDefaultAiClient(config.ai ?? {});
+    }
     const systemPrompt = config.systemPrompt ?? (0, prompts_js_1.aiSystemPrompt)();
     const suggestPrompt = config.suggestPrompt ?? (0, prompts_js_1.aiSuggestPrompt)();
     const extraSafetyRules = config.extraSafetyRules ?? [];

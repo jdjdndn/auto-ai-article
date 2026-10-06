@@ -48,3 +48,7 @@ export type { ExecutorConfig, ExecutorResult } from './executor.js'
 // 定时调度器（Cloudflare Durable Objects Alarms）
 export { ArticleScheduler, startScheduler } from './scheduler.js'
 export type { SchedulerConfig } from './scheduler.js'
+
+// AI 模型降级库（Cloudflare Workers AI 免费模型故障自动切换）
+export { createFallbackClient, createCloudflareAiClient, createAiClient, getRecommendedModels, FREE_TEXT_MODELS, resetQuotaState, getQuotaExhaustedModels } from './ai-fallback.js'
+export type { AiModel, FallbackConfig, FallbackResult, FallbackReason, UnifiedAiConfig } from './ai-fallback.js'

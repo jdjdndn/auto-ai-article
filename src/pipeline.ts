@@ -10,6 +10,7 @@ import type {
 import { aiSystemPrompt, aiSuggestPrompt } from './prompts.js'
 import { extractJson, asAnyArray, normalizeContentBlocks } from './utils.js'
 import { checkArticleSafety, replaceViolatingWords } from './content-safety.js'
+import { createAiClient } from './ai-fallback.js'
 
 // —— 占位 URL 清洗 ——
 
@@ -110,7 +111,23 @@ export interface PipelineDB {
 
 export function createPipeline(db: PipelineDB, config: PipelineConfig = {}): Pipeline {
   const target = config.target ?? 3
-  const aiClient = config.ai?.client ?? createDefaultAiClient(config.ai ?? {})
+
+  // AI 客户端选择逻辑：
+  // 1. config.ai.client → 直接使用（最高优先级）
+  // 2. config.ai.cloudflare → 使用降级客户端（额度用完自动切换）
+  // 3. config.ai.baseUrl/apiKey → 使用 OpenAI 兼容客户端
+  // 4. 默认 → OpenAI 兼容客户端
+  let aiClient: AiClient
+  if (config.ai?.client) {
+    aiClient = config.ai.client
+  } else if (config.ai?.cloudflare) {
+    aiClient = createAiClient({
+      cloudflare: config.ai.cloudflare,
+    })
+  } else {
+    aiClient = createDefaultAiClient(config.ai ?? {})
+  }
+
   const systemPrompt = config.systemPrompt ?? aiSystemPrompt()
   const suggestPrompt = config.suggestPrompt ?? aiSuggestPrompt()
   const extraSafetyRules = config.extraSafetyRules ?? []
