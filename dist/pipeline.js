@@ -93,19 +93,24 @@ function createPipeline(db, config = {}) {
         return withRetry(async () => {
             const text = await aiClient([
                 { role: 'system', content: suggestPrompt },
-                { role: 'user', content: '请输出 3 个选题 JSON 数组。' },
+                { role: 'user', content: '请输出 3 个选题 JSON 数组。只输出 JSON 数组，不要 markdown，不要解释。' },
             ]);
             const parsed = (0, utils_js_1.extractJson)(text);
-            const arr = Array.isArray(parsed) ? parsed
-                : Array.isArray(parsed?.topics) ? parsed.topics
-                    : null;
-            if (!arr || !arr.length)
-                throw new Error('AI 选题返回空数组');
-            return arr.slice(0, 3).map((x) => ({
-                title: String(x.title || '').trim(),
-                angle: String(x.angle || '').trim(),
-                category: ['优惠', '攻略', '好物', '副业'].includes(x.category) ? x.category : 'auto',
-            }));
+            const arr = (0, utils_js_1.asAnyArray)(parsed);
+            if (!arr || !arr.length) {
+                const snippet = String(text || '').slice(0, 180).replace(/\s+/g, ' ');
+                throw new Error(`AI 选题返回空数组 raw=${snippet}`);
+            }
+            const items = arr
+                .map((x) => ({
+                title: String(x?.title || '').trim(),
+                angle: String(x?.angle || '').trim(),
+                category: ['优惠', '攻略', '好物', '副业'].includes(x?.category) ? x.category : 'auto',
+            }))
+                .filter((x) => x.title && x.angle);
+            if (!items.length)
+                throw new Error('AI 选题字段无效（缺 title/angle）');
+            return items.slice(0, 3);
         }, suggestRetries, 'AI 选题');
     }
     // —— 单素材生成 ——
@@ -122,7 +127,7 @@ function createPipeline(db, config = {}) {
         const item = {
             title: String(a.title || '').trim(),
             summary: String(a.summary || ''),
-            content: Array.isArray(a.content) ? a.content : [],
+            content: (0, utils_js_1.normalizeContentBlocks)(a.content),
             template: (['deal', 'guide', 'faq', 'default'].includes(a.template)
                 ? a.template
                 : (opts.template && opts.template !== 'auto' ? opts.template : 'deal')),

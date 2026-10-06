@@ -32,7 +32,7 @@ export { articles, seeds, runLogs } from './schema.js'
 export type { ArticleRow, SeedRow, RunLogRow } from './schema.js'
 
 // 工具函数
-export { extractJson, safeJson, normalizeJson, firstImageOf } from './utils.js'
+export { extractJson, safeJson, normalizeJson, firstImageOf, firstNonEmpty, asAnyArray, normalizeContentBlocks } from './utils.js'
 
 // 内容安全
 export { scanText, checkArticleSafety, replaceViolatingWords } from './content-safety.js'

@@ -3,7 +3,7 @@
 // ai-article-pipeline — 统一导出
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.startScheduler = exports.ArticleScheduler = exports.execute = exports.createPipeline = exports.replaceViolatingWords = exports.checkArticleSafety = exports.scanText = exports.firstImageOf = exports.normalizeJson = exports.safeJson = exports.extractJson = exports.runLogs = exports.seeds = exports.articles = exports.aiSuggestPrompt = exports.aiSystemPrompt = exports.dateContext = void 0;
+exports.startScheduler = exports.ArticleScheduler = exports.execute = exports.createPipeline = exports.replaceViolatingWords = exports.checkArticleSafety = exports.scanText = exports.normalizeContentBlocks = exports.asAnyArray = exports.firstNonEmpty = exports.firstImageOf = exports.normalizeJson = exports.safeJson = exports.extractJson = exports.runLogs = exports.seeds = exports.articles = exports.aiSuggestPrompt = exports.aiSystemPrompt = exports.dateContext = void 0;
 // 提示词
 var prompts_js_1 = require("./prompts.js");
 Object.defineProperty(exports, "dateContext", { enumerable: true, get: function () { return prompts_js_1.dateContext; } });
@@ -20,6 +20,9 @@ Object.defineProperty(exports, "extractJson", { enumerable: true, get: function 
 Object.defineProperty(exports, "safeJson", { enumerable: true, get: function () { return utils_js_1.safeJson; } });
 Object.defineProperty(exports, "normalizeJson", { enumerable: true, get: function () { return utils_js_1.normalizeJson; } });
 Object.defineProperty(exports, "firstImageOf", { enumerable: true, get: function () { return utils_js_1.firstImageOf; } });
+Object.defineProperty(exports, "firstNonEmpty", { enumerable: true, get: function () { return utils_js_1.firstNonEmpty; } });
+Object.defineProperty(exports, "asAnyArray", { enumerable: true, get: function () { return utils_js_1.asAnyArray; } });
+Object.defineProperty(exports, "normalizeContentBlocks", { enumerable: true, get: function () { return utils_js_1.normalizeContentBlocks; } });
 // 内容安全
 var content_safety_js_1 = require("./content-safety.js");
 Object.defineProperty(exports, "scanText", { enumerable: true, get: function () { return content_safety_js_1.scanText; } });

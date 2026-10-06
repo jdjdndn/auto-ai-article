@@ -8,7 +8,7 @@ import type {
   PipelineRunResult, TopicSuggestion, RunLogInput, ContentBlock,
 } from './types.js'
 import { aiSystemPrompt, aiSuggestPrompt } from './prompts.js'
-import { extractJson } from './utils.js'
+import { extractJson, asAnyArray, normalizeContentBlocks } from './utils.js'
 import { checkArticleSafety, replaceViolatingWords } from './content-safety.js'
 
 // —— 占位 URL 清洗 ——
@@ -124,18 +124,23 @@ export function createPipeline(db: PipelineDB, config: PipelineConfig = {}): Pip
     return withRetry(async () => {
       const text = await aiClient([
         { role: 'system', content: suggestPrompt },
-        { role: 'user', content: '请输出 3 个选题 JSON 数组。' },
+        { role: 'user', content: '请输出 3 个选题 JSON 数组。只输出 JSON 数组，不要 markdown，不要解释。' },
       ])
       const parsed = extractJson(text)
-      const arr = Array.isArray(parsed) ? parsed
-        : Array.isArray((parsed as any)?.topics) ? (parsed as any).topics
-        : null
-      if (!arr || !arr.length) throw new Error('AI 选题返回空数组')
-      return arr.slice(0, 3).map((x: any) => ({
-        title: String(x.title || '').trim(),
-        angle: String(x.angle || '').trim(),
-        category: ['优惠', '攻略', '好物', '副业'].includes(x.category) ? x.category : 'auto',
-      }))
+      const arr = asAnyArray(parsed)
+      if (!arr || !arr.length) {
+        const snippet = String(text || '').slice(0, 180).replace(/\s+/g, ' ')
+        throw new Error(`AI 选题返回空数组 raw=${snippet}`)
+      }
+      const items = arr
+        .map((x: any) => ({
+          title: String(x?.title || '').trim(),
+          angle: String(x?.angle || '').trim(),
+          category: ['优惠', '攻略', '好物', '副业'].includes(x?.category) ? x.category : 'auto',
+        }))
+        .filter((x) => x.title && x.angle)
+      if (!items.length) throw new Error('AI 选题字段无效（缺 title/angle）')
+      return items.slice(0, 3)
     }, suggestRetries, 'AI 选题')
   }
 
@@ -157,7 +162,7 @@ export function createPipeline(db: PipelineDB, config: PipelineConfig = {}): Pip
     const item: GeneratedArticle = {
       title: String(a.title || '').trim(),
       summary: String(a.summary || ''),
-      content: Array.isArray(a.content) ? a.content : [],
+      content: normalizeContentBlocks(a.content),
       template: (['deal', 'guide', 'faq', 'default'].includes(a.template)
         ? a.template
         : (opts.template && opts.template !== 'auto' ? opts.template : 'deal')) as GeneratedArticle['template'],

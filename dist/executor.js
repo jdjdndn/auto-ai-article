@@ -74,14 +74,21 @@ async function execute(db, config = {}) {
             return { mode: 'skipped', reason: '今天已有本地成功记录' };
         }
     }
-    // 3. 检查本地网关
-    const localOnline = await isLocalGatewayOnline(localGateway);
+    // 3. 检查本地网关（已提供云端 client 时跳过，Workers/线上环境无本地网关）
+    const localOnline = config.ai?.client
+        ? false
+        : await isLocalGatewayOnline(localGateway);
     if (!localOnline) {
         if (dryRun) {
             log('本地 AI 网关离线，dry-run 不转云端');
             return { mode: 'skipped', reason: '本地网关离线，dry-run 模式' };
         }
-        log('本地 AI 网关离线，尝试云端兜底');
+        if (config.ai?.client) {
+            log('已配置云端 AI client，直接走云端');
+        }
+        else {
+            log('本地 AI 网关离线，尝试云端兜底');
+        }
         if (!config.ai?.client && !config.ai?.apiKey) {
             return { mode: 'skipped', reason: '本地网关离线且未配置云端 AI' };
         }
