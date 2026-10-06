@@ -33,6 +33,37 @@ exports.FREE_TEXT_MODELS = [
     { id: '@cf/mistralai/mistral-small-3.1-24b-instruct', provider: 'Mistral AI', priority: 14, description: 'Mistral Small 3.1', chineseOptimized: false },
     { id: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', provider: 'Meta', priority: 15, description: 'Meta Llama 3.3 70B', chineseOptimized: false },
 ];
+// —— 响应提取（兼容不同模型格式）——
+/**
+ * 从 Cloudflare Workers AI 响应中提取文本内容
+ *
+ * 兼容格式：
+ * 1. 标准格式：{ result: { response: "..." } }
+ * 2. 直接字符串：{ result: "..." }
+ * 3. OpenAI 兼容：{ result: { choices: [{ message: { content: "..." } }] } }
+ * 4. 数组格式：{ result: [{ content: "..." }] }
+ * 5. 其他格式：尝试提取 content/text 字段
+ */
+function extractResponse(data) {
+    // 1. 标准格式：{ result: { response: "..." } }
+    if (typeof data?.result?.response === 'string') {
+        return data.result.response;
+    }
+    // 2. 直接字符串：{ result: "..." }
+    if (typeof data?.result === 'string') {
+        return data.result;
+    }
+    // 3. OpenAI 兼容格式：{ result: { choices: [{ message: { content: "..." } }] } }
+    if (data?.result?.choices?.[0]?.message?.content) {
+        return data.result.choices[0].message.content;
+    }
+    // 4. 数组格式：{ result: [{ content: "..." }] }
+    if (Array.isArray(data?.result) && data.result[0]?.content) {
+        return data.result[0].content;
+    }
+    // 5. 其他格式：尝试提取 content/text 字段
+    return data?.result?.content ?? data?.result?.text ?? '';
+}
 // —— 错误分类 ——
 function classifyError(error) {
     const msg = error.message.toLowerCase();
@@ -67,7 +98,7 @@ function createModelClient(model, config) {
             throw new Error(`HTTP ${res.status}: ${body.slice(0, 200)}`);
         }
         const data = await res.json();
-        return data?.result?.response ?? data?.result ?? '';
+        return extractResponse(data);
     };
 }
 // —— 额度状态记录（模块级，进程内共享）——

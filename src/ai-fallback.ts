@@ -90,6 +90,43 @@ export interface FallbackResult {
   content: string
 }
 
+// —— 响应提取（兼容不同模型格式）——
+
+/**
+ * 从 Cloudflare Workers AI 响应中提取文本内容
+ *
+ * 兼容格式：
+ * 1. 标准格式：{ result: { response: "..." } }
+ * 2. 直接字符串：{ result: "..." }
+ * 3. OpenAI 兼容：{ result: { choices: [{ message: { content: "..." } }] } }
+ * 4. 数组格式：{ result: [{ content: "..." }] }
+ * 5. 其他格式：尝试提取 content/text 字段
+ */
+function extractResponse(data: any): string {
+  // 1. 标准格式：{ result: { response: "..." } }
+  if (typeof data?.result?.response === 'string') {
+    return data.result.response
+  }
+
+  // 2. 直接字符串：{ result: "..." }
+  if (typeof data?.result === 'string') {
+    return data.result
+  }
+
+  // 3. OpenAI 兼容格式：{ result: { choices: [{ message: { content: "..." } }] } }
+  if (data?.result?.choices?.[0]?.message?.content) {
+    return data.result.choices[0].message.content
+  }
+
+  // 4. 数组格式：{ result: [{ content: "..." }] }
+  if (Array.isArray(data?.result) && data.result[0]?.content) {
+    return data.result[0].content
+  }
+
+  // 5. 其他格式：尝试提取 content/text 字段
+  return data?.result?.content ?? data?.result?.text ?? ''
+}
+
 // —— 错误分类 ——
 
 function classifyError(error: Error): FallbackReason {
@@ -131,7 +168,7 @@ function createModelClient(
     }
 
     const data: any = await res.json()
-    return data?.result?.response ?? data?.result ?? ''
+    return extractResponse(data)
   }
 }
 
