@@ -32,7 +32,7 @@ export { articles, seeds, runLogs } from './schema.js'
 export type { ArticleRow, SeedRow, RunLogRow } from './schema.js'
 
 // 工具函数
-export { extractJson, safeJson, normalizeJson, firstImageOf, firstNonEmpty, asAnyArray, normalizeContentBlocks, escapeHtml, renderBlock, renderArticleBlocks, renderArticleCta, generateToc, readingTime } from './utils.js'
+export { extractJson, safeJson, normalizeJson, firstImageOf, firstNonEmpty, asAnyArray, normalizeContentBlocks, escapeHtml, renderBlock, renderArticleBlocks, renderArticleCta, generateToc, readingTime, articleCss } from './utils.js'
 
 // 素材采集
 export { fetchRssFeed, extractArticleText, textSimilarity, normalizeText } from './sources.js'

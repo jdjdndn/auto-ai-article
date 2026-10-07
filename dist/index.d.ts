@@ -2,7 +2,7 @@ export type { Seed, SeedInput, GeneratedArticle, ContentBlock, FaqItem, LinkItem
 export { dateContext, aiSystemPrompt, aiSuggestPrompt } from './prompts.js';
 export { articles, seeds, runLogs } from './schema.js';
 export type { ArticleRow, SeedRow, RunLogRow } from './schema.js';
-export { extractJson, safeJson, normalizeJson, firstImageOf, firstNonEmpty, asAnyArray, normalizeContentBlocks, escapeHtml, renderBlock, renderArticleBlocks, renderArticleCta, generateToc, readingTime } from './utils.js';
+export { extractJson, safeJson, normalizeJson, firstImageOf, firstNonEmpty, asAnyArray, normalizeContentBlocks, escapeHtml, renderBlock, renderArticleBlocks, renderArticleCta, generateToc, readingTime, articleCss } from './utils.js';
 export { fetchRssFeed, extractArticleText, textSimilarity, normalizeText } from './sources.js';
 export type { RssItem } from './sources.js';
 export { scanText, checkArticleSafety, replaceViolatingWords } from './content-safety.js';

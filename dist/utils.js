@@ -3,6 +3,7 @@
 // 工具函数 — 从 article-site/shared/ai-utils.mjs + content.ts 提取
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.articleCss = void 0;
 exports.firstNonEmpty = firstNonEmpty;
 exports.extractJson = extractJson;
 exports.asAnyArray = asAnyArray;
@@ -346,6 +347,88 @@ function normalizeContentBlocks(raw) {
 // ============================================================
 // 前端渲染：blocks → HTML 字符串（Nuxt v-html 调用）
 // ============================================================
+/** 文章页配套 CSS（TOC/block 排版），各项目用 useHead({ style }) 注入 */
+exports.articleCss = `
+.article-toc {
+  background: var(--primary-weak, #eff6ff);
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+.article-toc .toc-title {
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  list-style: none;
+}
+.article-toc .toc-title::-webkit-details-marker { display: none; }
+.article-toc ul { list-style: none; padding: 0; margin: 8px 0 0; }
+.article-toc li { padding: 3px 0; }
+.article-toc a {
+  color: var(--primary);
+  text-decoration: none;
+  line-height: 1.5;
+}
+.article-toc a:hover { text-decoration: underline; }
+.block-h2 { scroll-margin-top: 80px; }
+@media (max-width: 767px) {
+  .article-toc .toc-title::after {
+    content: '\\25B8';
+    float: right;
+    transition: transform .2s;
+  }
+  .article-toc[open] .toc-title::after { transform: rotate(90deg); }
+}
+.text-block, .list-item {
+  line-height: 1.8;
+  margin: 0 0 1em;
+  color: var(--text);
+}
+.block-list { margin: 0 0 1em; }
+.block-price {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+  margin: 0 0 1em;
+}
+.block-price .price { font-size: 20px; font-weight: 700; color: #dc2626; }
+.block-price .original { font-size: 14px; color: #94a3b8; text-decoration: line-through; }
+.block-price .spec { font-size: 13px; color: #64748b; }
+.block-quote {
+  padding: 12px 16px;
+  border-left: 3px solid var(--primary, #2563eb);
+  background: var(--primary-weak, #eff6ff);
+  border-radius: 0 8px 8px 0;
+  margin: 0 0 1em;
+  font-style: italic;
+}
+.block-quote.warn { border-left-color: #f59e0b; background: #fffbeb; }
+.block-image { margin: 0 0 1em; }
+.block-image img { max-width: 100%; border-radius: 8px; }
+.block-image figcaption { font-size: 12px; color: #94a3b8; text-align: center; margin-top: 6px; }
+.ad-block {
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  border-radius: 10px;
+  margin: 1.5em 0;
+}
+.ad-block .ad-label {
+  display: inline-block;
+  font-size: 12px;
+  color: var(--primary, #2563eb);
+  background: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-bottom: 6px;
+}
+.ad-block p { margin: 0 0 8px; }
+.ad-block .ad-link { color: var(--primary, #2563eb); font-weight: 500; }
+`;
 /** HTML 转义，防 XSS */
 function escapeHtml(v) {
     if (v == null)
