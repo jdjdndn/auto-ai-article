@@ -10,7 +10,7 @@ export { createPipeline } from './pipeline.js';
 export type { Pipeline, PipelineDB } from './pipeline.js';
 export { execute } from './executor.js';
 export type { ExecutorConfig, ExecutorResult } from './executor.js';
-export { ArticleScheduler, startScheduler } from './scheduler.js';
+export { ArticleScheduler, startScheduler, getNextAlarmTime, initDoAlarm, rescheduleDoAlarm, applyWorkerEnv } from './scheduler.js';
 export type { SchedulerConfig } from './scheduler.js';
 export { createFallbackClient, createCloudflareAiClient, createAiClient, createOpenRouterClient, getRecommendedModels, FREE_TEXT_MODELS, OPENROUTER_FREE_MODELS, resetQuotaState, getQuotaExhaustedModels, extractResponse } from './ai-fallback.js';
 export type { AiModel, FallbackConfig, FallbackResult, FallbackReason, UnifiedAiConfig } from './ai-fallback.js';

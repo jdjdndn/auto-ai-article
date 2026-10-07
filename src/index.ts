@@ -51,7 +51,7 @@ export { execute } from './executor.js'
 export type { ExecutorConfig, ExecutorResult } from './executor.js'
 
 // 定时调度器（Cloudflare Durable Objects Alarms）
-export { ArticleScheduler, startScheduler } from './scheduler.js'
+export { ArticleScheduler, startScheduler, getNextAlarmTime, initDoAlarm, rescheduleDoAlarm, applyWorkerEnv } from './scheduler.js'
 export type { SchedulerConfig } from './scheduler.js'
 
 // AI 模型降级库（Cloudflare Workers AI 免费模型故障自动切换）

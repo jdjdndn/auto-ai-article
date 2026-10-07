@@ -1,4 +1,12 @@
 import { type ExecutorConfig } from './executor.js';
+/** 计算下一次 alarm 时间（固定时间，每天触发，UTC+8 中国时区；time 形如 "08:00"） */
+export declare function getNextAlarmTime(timeStr: string, from?: Date): number;
+/** 把 Worker env 注入 globalThis.__env__ 与 process.env（DB/AI），供 alarm/scheduled 路径读取 */
+export declare function applyWorkerEnv(env: any): void;
+/** DO alarm 首次初始化：已有 alarm 则不动（返回 null），否则设置下一次并返回时间戳 */
+export declare function initDoAlarm(storage: any, time: string): Promise<number | null>;
+/** DO alarm 触发后重设下一次（一次性 alarm 必须重设），返回时间戳 */
+export declare function rescheduleDoAlarm(storage: any, time: string): Promise<number>;
 /** 调度器配置 */
 export interface SchedulerConfig {
     /** 目标时间（如 "08:00"），默认 "08:00" */
@@ -41,8 +49,6 @@ export declare class ArticleScheduler {
     }>;
     /** 设置下一天的 alarm */
     private scheduleNext;
-    /** 计算下一次 alarm 时间（固定时间，每天触发，UTC+8 中国时区） */
-    private getNextAlarmTime;
 }
 /**
  * 启动调度器 — 在 Worker fetch handler 中调用

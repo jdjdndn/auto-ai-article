@@ -8,6 +8,53 @@ import { articles, seeds, runLogs } from './schema.js'
 import { eq, desc } from 'drizzle-orm'
 import { firstImageOf } from './utils.js'
 
+// ============================================================
+// 通用调度工具（供消费项目 Nitro 插件 / 裸 Worker 复用）
+// ============================================================
+
+/** 计算下一次 alarm 时间（固定时间，每天触发，UTC+8 中国时区；time 形如 "08:00"） */
+export function getNextAlarmTime(timeStr: string, from = new Date()): number {
+  const [hours, minutes] = timeStr.split(':').map(Number)
+  // Workers 是 UTC，先 +8 偏移到中国时间再算
+  const now = new Date(from.getTime() + 8 * 3600 * 1000)
+  const target = new Date(now)
+  target.setUTCHours(hours, minutes, 0, 0)
+  if (target <= now) {
+    target.setUTCDate(target.getUTCDate() + 1)
+  }
+  // 减回 8 偏移，得到真实 UTC 时间戳
+  return target.getTime() - 8 * 3600 * 1000
+}
+
+/** 把 Worker env 注入 globalThis.__env__ 与 process.env（DB/AI），供 alarm/scheduled 路径读取 */
+export function applyWorkerEnv(env: any): void {
+  if (!env) return
+  ;(globalThis as any).__env__ = env
+  if (env.DB) (process.env as any).DB = env.DB
+  if (env.AI) (process.env as any).AI = env.AI
+}
+
+/** DO alarm 首次初始化：已有 alarm 则不动（返回 null），否则设置下一次并返回时间戳 */
+export async function initDoAlarm(storage: any, time: string): Promise<number | null> {
+  const existing = await storage.getAlarm()
+  if (existing) {
+    console.log(`[scheduler] alarm 已存在: ${new Date(existing).toISOString()}`)
+    return null
+  }
+  const next = getNextAlarmTime(time)
+  await storage.setAlarm(next)
+  console.log(`[scheduler] 首次 alarm 设置: ${new Date(next).toISOString()}`)
+  return next
+}
+
+/** DO alarm 触发后重设下一次（一次性 alarm 必须重设），返回时间戳 */
+export async function rescheduleDoAlarm(storage: any, time: string): Promise<number> {
+  const next = getNextAlarmTime(time)
+  await storage.setAlarm(next)
+  console.log(`[scheduler] 下次 alarm: ${new Date(next).toISOString()}`)
+  return next
+}
+
 /** 调度器配置 */
 export interface SchedulerConfig {
   /** 目标时间（如 "08:00"），默认 "08:00" */
@@ -72,7 +119,7 @@ export class ArticleScheduler {
       return { scheduled: new Date(existing).toISOString() }
     }
 
-    const next = this.getNextAlarmTime(config.time || '08:00')
+    const next = getNextAlarmTime(config.time || '08:00')
     await this.ctx.storage.setAlarm(next)
     console.log(`[scheduler] 首次 alarm 设置: ${new Date(next).toISOString()}`)
 
@@ -90,23 +137,9 @@ export class ArticleScheduler {
 
   /** 设置下一天的 alarm */
   private async scheduleNext(time?: string) {
-    const next = this.getNextAlarmTime(time || '08:00')
+    const next = getNextAlarmTime(time || '08:00')
     await this.ctx.storage.setAlarm(next)
     console.log(`[scheduler] 下次 alarm: ${new Date(next).toISOString()}`)
-  }
-
-  /** 计算下一次 alarm 时间（固定时间，每天触发，UTC+8 中国时区） */
-  private getNextAlarmTime(timeStr: string): number {
-    const [hours, minutes] = timeStr.split(':').map(Number)
-    // Workers 是 UTC，先 +8 偏移到中国时间再算
-    const now = new Date(Date.now() + 8 * 3600 * 1000)
-    const target = new Date(now)
-    target.setUTCHours(hours, minutes, 0, 0)
-    if (target <= now) {
-      target.setUTCDate(target.getUTCDate() + 1)
-    }
-    // 减回 8 偏移，得到真实 UTC 时间戳
-    return target.getTime() - 8 * 3600 * 1000
   }
 }
 
