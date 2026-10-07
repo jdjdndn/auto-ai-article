@@ -45,12 +45,69 @@ npm install
 npm run build
 ```
 
-### 方式三：本地路径引用（开发/测试）
+### 方式三：本地 file: 引用（推荐，自动更新）
+
+所有子站项目统一使用 `file:` 协议引用本库，npm 创建 **symlink** 实时指向 `auto-ai-article/dist/`，库更新后各项目**无需重新安装**即自动生效。
+
+**引用方式**：
+
+```json
+// 子站项目 package.json（项目在 E:/code/<分类>/<站点>/ 下）
+{
+  "dependencies": {
+    "ai-article-pipeline": "file:../../auto-ai-article"
+  }
+}
+
+// article-site（项目在 E:/code/ 根目录下，路径差一级）
+{
+  "dependencies": {
+    "ai-article-pipeline": "file:../auto-ai-article"
+  }
+}
+```
+
+**工作原理**：
+
+```
+auto-ai-article/
+  src/           ← 修改这里
+  dist/          ← npm run build 产出
+       ↑ symlink
+子站项目/node_modules/ai-article-pipeline → auto-ai-article/
+```
+
+**更新流程**：
 
 ```bash
-# 在项目根目录
-npm install ../auto-ai-article
+# 1. 修改库源码
+vim auto-ai-article/src/ai-fallback.ts
+
+# 2. 重新编译
+cd auto-ai-article && npm run build
+
+# 3. 各子站项目自动生效（symlink 实时指向新 dist/，无需 npm install）
 ```
+
+**当前引用项目一览**：
+
+| 项目 | package.json 路径 |
+|------|------------------|
+| 号卡/172, hm, yk, kd, hk, ksj, gc | `file:../../auto-ai-article` |
+| 信用卡/kahe, suishou, zhangshang | `file:../../auto-ai-article` |
+| 随身wifi/chaoneng, feilimao, gexing, liantong | `file:../../auto-ai-article` |
+| article-site | `file:../auto-ai-article` |
+
+**为何不用 vendored 副本**：
+
+| | file: symlink（推荐） | vendored 副本 |
+|---|---|---|
+| 库更新后 | 自动生效 | 需手动 re-copy dist |
+| 版本一致性 | 始终同步 | 易漂移 |
+| 磁盘占用 | 无额外副本 | 每项目一份 |
+| 断网可构建 | ✅（本地路径） | ✅ |
+
+> 历史遗留的 `server/lib/ai-article-pipeline/` 或 `vendor/ai-article-pipeline/` 已全部移除，统一改用 `file:` 引用。
 
 ---
 

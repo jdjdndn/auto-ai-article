@@ -52,6 +52,22 @@ export interface FallbackResult {
     /** 生成的内容 */
     content: string;
 }
+/**
+ * 从 Cloudflare Workers AI 响应中提取文本内容
+ *
+ * 兼容格式（HTTP API + Workers AI binding 两条路径共用）：
+ * 1. 顶层字符串：data 本身就是 string
+ * 2. 标准格式：{ result: { response: "..." } }
+ * 3. 直接字符串：{ result: "..." }
+ * 4. OpenAI 兼容：{ result: { choices: [{ message: { content: "..." } }] } }
+ * 5. 数组格式：{ result: [{ content: "..." }] }
+ * 6. binding 无 result 包装：{ choices: [...] } / { response: "..." } / { text: "..." }
+ * 7. reasoning_content 回退（思考型模型：content 为空时取 reasoning）
+ * 8. 其他格式：尝试提取 content/text 字段
+ *
+ * 空串保护：content 为空串/纯空白时继续尝试后续通道，避免 ?? 短路丢掉真实内容。
+ */
+export declare function extractResponse(data: any): string;
 /** 重置额度状态（测试或手动恢复时使用） */
 export declare function resetQuotaState(): void;
 /** 获取当前额度用完的模型列表 */

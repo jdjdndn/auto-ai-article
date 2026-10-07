@@ -107,36 +107,56 @@ export interface FallbackResult {
 /**
  * 从 Cloudflare Workers AI 响应中提取文本内容
  *
- * 兼容格式：
- * 1. 标准格式：{ result: { response: "..." } }
- * 2. 直接字符串：{ result: "..." }
- * 3. OpenAI 兼容：{ result: { choices: [{ message: { content: "..." } }] } }
- * 4. 数组格式：{ result: [{ content: "..." }] }
- * 5. 其他格式：尝试提取 content/text 字段
+ * 兼容格式（HTTP API + Workers AI binding 两条路径共用）：
+ * 1. 顶层字符串：data 本身就是 string
+ * 2. 标准格式：{ result: { response: "..." } }
+ * 3. 直接字符串：{ result: "..." }
+ * 4. OpenAI 兼容：{ result: { choices: [{ message: { content: "..." } }] } }
+ * 5. 数组格式：{ result: [{ content: "..." }] }
+ * 6. binding 无 result 包装：{ choices: [...] } / { response: "..." } / { text: "..." }
+ * 7. reasoning_content 回退（思考型模型：content 为空时取 reasoning）
+ * 8. 其他格式：尝试提取 content/text 字段
+ *
+ * 空串保护：content 为空串/纯空白时继续尝试后续通道，避免 ?? 短路丢掉真实内容。
  */
-function extractResponse(data: any): string {
-  // 1. 标准格式：{ result: { response: "..." } }
-  if (typeof data?.result?.response === 'string') {
-    return data.result.response
+export function extractResponse(data: any): string {
+  // 1. 顶层字符串：部分 binding 直接返回 string
+  if (typeof data === 'string') return data
+
+  const pick = (v: unknown): string => (typeof v === 'string' && v.trim() ? v : '')
+
+  // 2. 标准格式：{ result: { response: "..." } }
+  const r1 = pick(data?.result?.response)
+  if (r1) return r1
+
+  // 3. 直接字符串：{ result: "..." }
+  const r2 = pick(data?.result)
+  if (r2) return r2
+
+  // 4. OpenAI 兼容：{ result: { choices: [{ message: { content } }] } }
+  const r3 = pick(data?.result?.choices?.[0]?.message?.content)
+  if (r3) return r3
+
+  // 5. 数组格式：{ result: [{ content: "..." }] }
+  if (Array.isArray(data?.result)) {
+    const r4 = pick(data.result[0]?.content)
+    if (r4) return r4
   }
 
-  // 2. 直接字符串：{ result: "..." }
-  if (typeof data?.result === 'string') {
-    return data.result
-  }
+  // 6. binding 无 result 包装（部分模型直接返回顶层字段）
+  const r5 = pick(data?.choices?.[0]?.message?.content)
+  if (r5) return r5
+  const r6 = pick(data?.response)
+  if (r6) return r6
 
-  // 3. OpenAI 兼容格式：{ result: { choices: [{ message: { content: "..." } }] } }
-  if (data?.result?.choices?.[0]?.message?.content) {
-    return data.result.choices[0].message.content
-  }
+  // 7. reasoning_content 回退（思考型模型：content 为空时取 reasoning）
+  const r7 = pick(data?.result?.choices?.[0]?.message?.reasoning_content)
+  if (r7) return r7
+  const r8 = pick(data?.choices?.[0]?.message?.reasoning_content)
+  if (r8) return r8
 
-  // 4. 数组格式：{ result: [{ content: "..." }] }
-  if (Array.isArray(data?.result) && data.result[0]?.content) {
-    return data.result[0].content
-  }
-
-  // 5. 其他格式：尝试提取 content/text 字段
-  return data?.result?.content ?? data?.result?.text ?? ''
+  // 8. 其他格式：尝试提取 content/text 字段
+  return pick(data?.result?.content) || pick(data?.result?.text) || pick(data?.text) || ''
 }
 
 // —— 错误分类 ——

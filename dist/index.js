@@ -3,7 +3,7 @@
 // ai-article-pipeline — 统一导出
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getQuotaExhaustedModels = exports.resetQuotaState = exports.FREE_TEXT_MODELS = exports.getRecommendedModels = exports.createAiClient = exports.createCloudflareAiClient = exports.createFallbackClient = exports.startScheduler = exports.ArticleScheduler = exports.execute = exports.createPipeline = exports.replaceViolatingWords = exports.checkArticleSafety = exports.scanText = exports.normalizeContentBlocks = exports.asAnyArray = exports.firstNonEmpty = exports.firstImageOf = exports.normalizeJson = exports.safeJson = exports.extractJson = exports.runLogs = exports.seeds = exports.articles = exports.aiSuggestPrompt = exports.aiSystemPrompt = exports.dateContext = void 0;
+exports.extractResponse = exports.getQuotaExhaustedModels = exports.resetQuotaState = exports.FREE_TEXT_MODELS = exports.getRecommendedModels = exports.createAiClient = exports.createCloudflareAiClient = exports.createFallbackClient = exports.startScheduler = exports.ArticleScheduler = exports.execute = exports.createPipeline = exports.replaceViolatingWords = exports.checkArticleSafety = exports.scanText = exports.normalizeContentBlocks = exports.asAnyArray = exports.firstNonEmpty = exports.firstImageOf = exports.normalizeJson = exports.safeJson = exports.extractJson = exports.runLogs = exports.seeds = exports.articles = exports.aiSuggestPrompt = exports.aiSystemPrompt = exports.dateContext = void 0;
 // 提示词
 var prompts_js_1 = require("./prompts.js");
 Object.defineProperty(exports, "dateContext", { enumerable: true, get: function () { return prompts_js_1.dateContext; } });
@@ -47,3 +47,4 @@ Object.defineProperty(exports, "getRecommendedModels", { enumerable: true, get: 
 Object.defineProperty(exports, "FREE_TEXT_MODELS", { enumerable: true, get: function () { return ai_fallback_js_1.FREE_TEXT_MODELS; } });
 Object.defineProperty(exports, "resetQuotaState", { enumerable: true, get: function () { return ai_fallback_js_1.resetQuotaState; } });
 Object.defineProperty(exports, "getQuotaExhaustedModels", { enumerable: true, get: function () { return ai_fallback_js_1.getQuotaExhaustedModels; } });
+Object.defineProperty(exports, "extractResponse", { enumerable: true, get: function () { return ai_fallback_js_1.extractResponse; } });
