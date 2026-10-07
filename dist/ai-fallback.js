@@ -3,9 +3,6 @@
 // AI 模型降级库 — Cloudflare Workers AI 免费模型故障自动切换
 // 独立封装，不修改其他项目代码
 // ============================================================
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FREE_TEXT_MODELS = void 0;
 exports.extractResponse = extractResponse;
@@ -15,8 +12,6 @@ exports.createFallbackClient = createFallbackClient;
 exports.getRecommendedModels = getRecommendedModels;
 exports.createCloudflareAiClient = createCloudflareAiClient;
 exports.createAiClient = createAiClient;
-const fs_1 = __importDefault(require("fs"));
-const path_1 = __importDefault(require("path"));
 // —— 免费模型清单（按优先级排序）——
 // 来源：Cloudflare Workers AI 官方文档（2026-10）
 // 免费额度：每个模型每日 10,000 neurons
@@ -176,25 +171,24 @@ function getQuotaExhaustedModels() {
 function todayUtc() {
     return new Date().toISOString().slice(0, 10);
 }
-function loadBadModels(file) {
-    if (!file)
+function loadBadModels(store) {
+    if (!store)
         return new Set();
     try {
-        const d = JSON.parse(fs_1.default.readFileSync(file, 'utf8'));
-        if (d && d.date === todayUtc() && Array.isArray(d.models))
-            return new Set(d.models);
+        const data = store.load();
+        if (data && Array.isArray(data))
+            return new Set(data);
     }
-    catch { /* 文件不存在或损坏：从空开始 */ }
+    catch { /* 读失败：从空开始 */ }
     return new Set();
 }
-function saveBadModels(file, models) {
-    if (!file)
+function saveBadModels(store, models) {
+    if (!store)
         return;
     try {
-        fs_1.default.mkdirSync(path_1.default.dirname(file), { recursive: true });
-        fs_1.default.writeFileSync(file, JSON.stringify({ date: todayUtc(), models: [...models] }, null, 2));
+        store.save([...models]);
     }
-    catch { /* 写盘失败不影响主流程 */ }
+    catch { /* 写失败不影响主流程 */ }
 }
 // —— 创建降级客户端 ——
 function createFallbackClient(config) {
@@ -205,7 +199,7 @@ function createFallbackClient(config) {
     const retriesPerModel = config.retriesPerModel ?? 1;
     const minLength = config.minLength || 0;
     const requireEnding = config.requireEnding ?? false;
-    const badModels = loadBadModels(config.badModelFile);
+    const badModels = loadBadModels(config.badModelStore);
     const log = (...args) => console.log(new Date().toISOString(), '[ai-fallback]', ...args);
     // 完整收尾门禁：最后一句必须以句号类标点结束，或以 URL 收尾（URL 后不带句号是模型常见合法写法）
     function endingOk(content) {
@@ -273,7 +267,7 @@ function createFallbackClient(config) {
             // 模型整体失败（重试完或确定性失败）→ 记入当天失败记忆：今天之内不再使用
             if (failedForGood) {
                 badModels.add(model.id);
-                saveBadModels(config.badModelFile, badModels);
+                saveBadModels(config.badModelStore, badModels);
                 attempted.push({ model: model.id, success: false, reason: classifyError(lastError || new Error('unknown')), error: lastError?.message });
             }
         }

@@ -9,10 +9,11 @@ exports.aiSystemPrompt = aiSystemPrompt;
 exports.aiSuggestPrompt = aiSuggestPrompt;
 /** 时间背景（AI 选题用：当前日期 + 近 45 天节日/节气 + 当月时令） */
 function dateContext() {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = now.getMonth() + 1;
-    const d = now.getDate();
+    // Workers 默认 UTC，+8 偏移到中国时间
+    const now = new Date(Date.now() + 8 * 3600 * 1000);
+    const y = now.getUTCFullYear();
+    const m = now.getUTCMonth() + 1;
+    const d = now.getUTCDate();
     const events = [
         [1, 1, '元旦'], [2, 14, '情人节'], [3, 8, '妇女节'], [4, 5, '清明'],
         [5, 1, '劳动节'], [6, 1, '儿童节'], [8, 1, '建军节'], [9, 10, '教师节'],

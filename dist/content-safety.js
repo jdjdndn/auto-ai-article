@@ -60,9 +60,9 @@ function scanText(text, rules = DEFAULT_RULES) {
             let idx = text.indexOf(w);
             let found = false;
             while (idx !== -1) {
-                // 检查前面 6 个字符内是否有豁免词
-                const before = text.slice(Math.max(0, idx - 6), idx);
-                const exempted = EXEMPT_PREFIXES.some(p => before.endsWith(p));
+                // 检查前面 10 个字符内是否有豁免词（"不要赌博""远离刷单"等正面提醒）
+                const before = text.slice(Math.max(0, idx - 10), idx);
+                const exempted = EXEMPT_PREFIXES.some(p => before.includes(p));
                 if (!exempted) {
                     found = true;
                     break;

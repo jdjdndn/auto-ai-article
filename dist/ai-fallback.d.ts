@@ -1,4 +1,9 @@
 import type { AiClient } from './types.js';
+/** 失败模型持久化存储接口（Workers 环境用 KV/D1，Node 环境用 fs） */
+export interface BadModelStore {
+    load(): string[] | null;
+    save(models: string[]): void;
+}
 export interface AiModel {
     /** 模型 ID（Cloudflare Workers AI） */
     id: string;
@@ -30,8 +35,8 @@ export interface FallbackConfig {
     retriesPerModel?: number;
     /** 生成 token 预算（默认 15360，覆盖思考型模型预算不足导致的内容截断） */
     maxTokens?: number;
-    /** 当天失败记忆文件路径：启用后当天失败过的模型当天不再使用（按 UTC 日期；跨进程/跨运行生效，如 .auto-write/bad-models.json） */
-    badModelFile?: string;
+    /** 当天失败记忆：注入存储实现（Node 传 fs 实现，Workers 传 KV 实现，不传则不持久化） */
+    badModelStore?: BadModelStore;
     /** 内容最短长度门禁（默认 0 不启用；启用后短文视为失败切换下一模型） */
     minLength?: number;
     /** 完整收尾门禁（默认 false 不启用；启用后结尾须以句号类标点或 URL 收尾，否则视为截断切换下一模型） */
@@ -85,7 +90,7 @@ export interface UnifiedAiConfig {
         timeoutMs?: number;
         retriesPerModel?: number;
         maxTokens?: number;
-        badModelFile?: string;
+        badModelStore?: BadModelStore;
         minLength?: number;
         requireEnding?: boolean;
         models?: AiModel[];

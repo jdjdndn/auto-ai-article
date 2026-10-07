@@ -3,9 +3,13 @@
 // 独立封装，不修改其他项目代码
 // ============================================================
 
-import fs from 'fs'
-import path from 'path'
 import type { AiClient, AiMessage } from './types.js'
+
+/** 失败模型持久化存储接口（Workers 环境用 KV/D1，Node 环境用 fs） */
+export interface BadModelStore {
+  load(): string[] | null
+  save(models: string[]): void
+}
 
 // —— 模型定义 ——
 
@@ -76,8 +80,8 @@ export interface FallbackConfig {
   retriesPerModel?: number
   /** 生成 token 预算（默认 15360，覆盖思考型模型预算不足导致的内容截断） */
   maxTokens?: number
-  /** 当天失败记忆文件路径：启用后当天失败过的模型当天不再使用（按 UTC 日期；跨进程/跨运行生效，如 .auto-write/bad-models.json） */
-  badModelFile?: string
+  /** 当天失败记忆：注入存储实现（Node 传 fs 实现，Workers 传 KV 实现，不传则不持久化） */
+  badModelStore?: BadModelStore
   /** 内容最短长度门禁（默认 0 不启用；启用后短文视为失败切换下一模型） */
   minLength?: number
   /** 完整收尾门禁（默认 false 不启用；启用后结尾须以句号类标点或 URL 收尾，否则视为截断切换下一模型） */
@@ -251,21 +255,20 @@ function todayUtc(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
-function loadBadModels(file?: string): Set<string> {
-  if (!file) return new Set()
+function loadBadModels(store?: BadModelStore): Set<string> {
+  if (!store) return new Set()
   try {
-    const d = JSON.parse(fs.readFileSync(file, 'utf8'))
-    if (d && d.date === todayUtc() && Array.isArray(d.models)) return new Set(d.models)
-  } catch { /* 文件不存在或损坏：从空开始 */ }
+    const data = store.load()
+    if (data && Array.isArray(data)) return new Set(data)
+  } catch { /* 读失败：从空开始 */ }
   return new Set()
 }
 
-function saveBadModels(file: string | undefined, models: Set<string>): void {
-  if (!file) return
+function saveBadModels(store: BadModelStore | undefined, models: Set<string>): void {
+  if (!store) return
   try {
-    fs.mkdirSync(path.dirname(file), { recursive: true })
-    fs.writeFileSync(file, JSON.stringify({ date: todayUtc(), models: [...models] }, null, 2))
-  } catch { /* 写盘失败不影响主流程 */ }
+    store.save([...models])
+  } catch { /* 写失败不影响主流程 */ }
 }
 
 // —— 创建降级客户端 ——
@@ -279,7 +282,7 @@ export function createFallbackClient(config: FallbackConfig): AiClient {
   const retriesPerModel = config.retriesPerModel ?? 1
   const minLength = config.minLength || 0
   const requireEnding = config.requireEnding ?? false
-  const badModels = loadBadModels(config.badModelFile)
+  const badModels = loadBadModels(config.badModelStore)
   const log = (...args: unknown[]) => console.log(new Date().toISOString(), '[ai-fallback]', ...args)
 
   // 完整收尾门禁：最后一句必须以句号类标点结束，或以 URL 收尾（URL 后不带句号是模型常见合法写法）
@@ -358,7 +361,7 @@ export function createFallbackClient(config: FallbackConfig): AiClient {
       // 模型整体失败（重试完或确定性失败）→ 记入当天失败记忆：今天之内不再使用
       if (failedForGood) {
         badModels.add(model.id)
-        saveBadModels(config.badModelFile, badModels)
+        saveBadModels(config.badModelStore, badModels)
         attempted.push({ model: model.id, success: false, reason: classifyError(lastError || new Error('unknown')), error: lastError?.message })
       }
     }
@@ -395,7 +398,7 @@ export interface UnifiedAiConfig {
     timeoutMs?: number
     retriesPerModel?: number
     maxTokens?: number
-    badModelFile?: string
+    badModelStore?: BadModelStore
     minLength?: number
     requireEnding?: boolean
     models?: AiModel[]
