@@ -34,6 +34,7 @@ function usage() {
   --api-key=<key>       AI API Key（云端模式）
   --api-base=<url>      AI API 地址（默认 https://api.openai.com/v1）
   --ai-model=<name>     云端 AI 模型名称（默认 gpt-4o-mini）
+  --openrouter-key=<key> OpenRouter 兜底 Key（CF 额度用尽自动切换免费模型链；或设 OPENROUTER_API_KEY 环境变量）
   --dry-run             只生成不入库
   --help                显示帮助
 
@@ -108,6 +109,9 @@ async function main() {
             apiKey: String(args['api-key'] || ''),
             baseUrl: String(args['api-base'] || 'https://api.openai.com/v1'),
             model: String(args['ai-model'] || 'gpt-4o-mini'),
+            openrouter: String(args['openrouter-key'] || process.env.OPENROUTER_API_KEY || '')
+                ? { apiKey: String(args['openrouter-key'] || process.env.OPENROUTER_API_KEY || ''), models: undefined }
+                : undefined,
         },
     };
     const db = createDemoDB();

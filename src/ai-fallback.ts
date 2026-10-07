@@ -397,6 +397,13 @@ export interface UnifiedAiConfig {
     requireEnding?: boolean
     models?: AiModel[]
   }
+  /** OpenRouter 兜底（OpenAI 兼容，免费模型链降级） */
+  openrouter?: {
+    apiKey: string
+    baseUrl?: string
+    models?: string[]
+    timeoutMs?: number
+  }
   /** OpenAI 兼容 API 配置（普通客户端） */
   openai?: {
     baseUrl?: string
@@ -406,17 +413,36 @@ export interface UnifiedAiConfig {
   }
 }
 
+/** OpenRouter 免费模型链（2026-10-07 实时查询，前 10 个，顺序即降级顺序） */
+export const OPENROUTER_FREE_MODELS: string[] = [
+  'inclusionai/ling-3.1-flash',
+  'apodex/apodex-1.1-mini:free',
+  'inclusionai/ling-3.0-flash-sante:free',
+  'dots-studio/dots-3-note-preview:free',
+  'liquid/lfm-2.5-2.6b:free',
+  'nvidia/nemotron-3.5-lightning:free',
+  'thinkingmachines/inkling-small:free',
+  'poolside/laguna-s-2.1:free',
+  'thinkingmachines/inkling:free',
+  'poolside/laguna-xs-2.1:free',
+]
+
 /**
  * 创建 AI 客户端（根据配置自动选择）
  *
  * 优先级：
  * 1. 配置了 cloudflare → 使用降级客户端（额度用完自动切换）
- * 2. 配置了 openai → 使用 OpenAI 兼容客户端
- * 3. 都未配置 → 抛出错误
+ * 2. 配置了 openrouter → 使用 OpenRouter 免费模型链客户端（CF 用尽后的兜底）
+ * 3. 配置了 openai → 使用 OpenAI 兼容客户端
+ * 4. 都未配置 → 抛出错误
  */
 export function createAiClient(config: UnifiedAiConfig): AiClient {
   if (config.cloudflare) {
     return createFallbackClient(config.cloudflare)
+  }
+
+  if (config.openrouter) {
+    return createOpenRouterClient(config.openrouter)
   }
 
   if (config.openai) {
@@ -441,5 +467,51 @@ export function createAiClient(config: UnifiedAiConfig): AiClient {
     }
   }
 
-  throw new Error('必须配置 cloudflare 或 openai')
+  throw new Error('必须配置 cloudflare、openrouter 或 openai')
+}
+
+/**
+ * OpenRouter 客户端：OpenAI 兼容端点 + 免费模型链依次降级
+ * （402 无额度 / 404 模型下架 / 429 限流 / 5xx → 切换下一模型）
+ */
+export function createOpenRouterClient(config: { apiKey: string; baseUrl?: string; models?: string[]; timeoutMs?: number }): AiClient {
+  const baseUrl = (config.baseUrl || 'https://openrouter.ai/api/v1').replace(/\/+$/, '')
+  const apiKey = config.apiKey
+  const models = config.models && config.models.length ? config.models : OPENROUTER_FREE_MODELS
+  const timeoutMs = config.timeoutMs || 120_000
+
+  return async (messages: AiMessage[]): Promise<string> => {
+    const attempted: string[] = []
+    for (const model of models) {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(new DOMException('AI 请求超时', 'TimeoutError')), timeoutMs)
+      try {
+        const res = await fetch(`${baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+          body: JSON.stringify({ model, messages, max_tokens: 15_360, stream: false }),
+          signal: controller.signal,
+        })
+        if (!res.ok) {
+          const bodyText = await res.text().catch(() => '')
+          throw new Error(`HTTP ${res.status}: ${bodyText.slice(0, 200)}`)
+        }
+        const data: any = await res.json()
+        const content = data?.choices?.[0]?.message?.content ?? ''
+        if (!content.trim()) throw new Error('AI 没有返回内容')
+        return content
+      } catch (e: any) {
+        attempted.push(`${model}(${classifyError(e)})`)
+        const reason = classifyError(e)
+        const msg = String(e.message || '').toLowerCase()
+        // 确定性失败直接切下一模型；未知/服务端错误也切（免费模型链无需重试）
+        if (reason === 'timeout' && !msg.includes('500') && !msg.includes('502') && !msg.includes('503')) {
+          // 超时可能瞬时，但免费链上继续尝试下一模型成本更低
+        }
+      } finally {
+        clearTimeout(timer)
+      }
+    }
+    throw new Error(`所有 OpenRouter 免费模型失败。尝试记录：${attempted.join(', ')}`)
+  }
 }

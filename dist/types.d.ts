@@ -146,6 +146,12 @@ export interface AiConfig {
         timeoutMs?: number;
         retriesPerModel?: number;
     };
+    /** OpenRouter 兜底（CF 额度用尽后自动切换；优先级高于 baseUrl/apiKey，低于 cloudflare） */
+    openrouter?: {
+        apiKey: string;
+        baseUrl?: string;
+        models?: string[];
+    };
 }
 export interface PipelineConfig {
     /** 每轮目标生成篇数（默认 3） */

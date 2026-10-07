@@ -127,18 +127,29 @@ export function createPipeline(db: PipelineDB, config: PipelineConfig = {}): Pip
 
   // AI 客户端选择逻辑：
   // 1. config.ai.client → 直接使用（最高优先级）
-  // 2. config.ai.cloudflare → 使用降级客户端（额度用完自动切换）
-  // 3. config.ai.baseUrl/apiKey → 使用 OpenAI 兼容客户端
-  // 4. 默认 → OpenAI 兼容客户端
+  // 2. config.ai.cloudflare → 使用降级客户端（额度用完自动切换 OpenRouter）
+  // 3. config.ai.openrouter / OPENROUTER_API_KEY → OpenRouter 免费模型链
+  // 4. config.ai.baseUrl/apiKey → 使用 OpenAI 兼容客户端
+  // 5. 默认 → OpenAI 兼容客户端
+  const ai: AiConfig = config.ai ?? {}
   let aiClient: AiClient
-  if (config.ai?.client) {
-    aiClient = config.ai.client
-  } else if (config.ai?.cloudflare) {
+  if (ai.client) {
+    aiClient = ai.client
+  } else if (ai.cloudflare) {
+    const orKey = ai.openrouter?.apiKey || process.env.OPENROUTER_API_KEY
     aiClient = createAiClient({
-      cloudflare: config.ai.cloudflare,
+      cloudflare: ai.cloudflare,
+      openrouter: orKey ? { apiKey: orKey, models: ai.openrouter?.models } : undefined,
+    })
+  } else if (ai.openrouter || process.env.OPENROUTER_API_KEY) {
+    const or = ai.openrouter
+    const orKey = (or && or.apiKey) || process.env.OPENROUTER_API_KEY!
+    const orModels = or && or.models
+    aiClient = createAiClient({
+      openrouter: { apiKey: orKey, ...(orModels ? { models: orModels } : {}) },
     })
   } else {
-    aiClient = createDefaultAiClient(config.ai ?? {})
+    aiClient = createDefaultAiClient(ai)
   }
 
   const systemPrompt = config.systemPrompt ?? aiSystemPrompt()

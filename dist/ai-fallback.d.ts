@@ -95,6 +95,13 @@ export interface UnifiedAiConfig {
         requireEnding?: boolean;
         models?: AiModel[];
     };
+    /** OpenRouter 兜底（OpenAI 兼容，免费模型链降级） */
+    openrouter?: {
+        apiKey: string;
+        baseUrl?: string;
+        models?: string[];
+        timeoutMs?: number;
+    };
     /** OpenAI 兼容 API 配置（普通客户端） */
     openai?: {
         baseUrl?: string;
@@ -103,12 +110,25 @@ export interface UnifiedAiConfig {
         maxTokens?: number;
     };
 }
+/** OpenRouter 免费模型链（2026-10-07 实时查询，前 10 个，顺序即降级顺序） */
+export declare const OPENROUTER_FREE_MODELS: string[];
 /**
  * 创建 AI 客户端（根据配置自动选择）
  *
  * 优先级：
  * 1. 配置了 cloudflare → 使用降级客户端（额度用完自动切换）
- * 2. 配置了 openai → 使用 OpenAI 兼容客户端
- * 3. 都未配置 → 抛出错误
+ * 2. 配置了 openrouter → 使用 OpenRouter 免费模型链客户端（CF 用尽后的兜底）
+ * 3. 配置了 openai → 使用 OpenAI 兼容客户端
+ * 4. 都未配置 → 抛出错误
  */
 export declare function createAiClient(config: UnifiedAiConfig): AiClient;
+/**
+ * OpenRouter 客户端：OpenAI 兼容端点 + 免费模型链依次降级
+ * （402 无额度 / 404 模型下架 / 429 限流 / 5xx → 切换下一模型）
+ */
+export declare function createOpenRouterClient(config: {
+    apiKey: string;
+    baseUrl?: string;
+    models?: string[];
+    timeoutMs?: number;
+}): AiClient;
