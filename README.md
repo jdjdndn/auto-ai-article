@@ -45,18 +45,24 @@ npm install
 npm run build
 ```
 
-### 方式三：本地 file: 引用（推荐，自动更新）
+### 方式三：vendor 引用（推荐，兼容 CI 部署）
 
-`npm run sync-vendor` 自动复制到`TARGETS`目录中
+各子站项目将库 dist 以 vendor 形式提交到自身 git 仓库，package.json 使用 `file:./vendor/ai-article-pipeline`。
+
+**为何不用 `file:../../auto-ai-article`**：各站点是独立 git 仓库，Cloudflare Pages CI 克隆后仓库外路径不存在，`Cannot resolve "ai-article-pipeline"` 导致部署失败。
 
 **工作原理**：
 
 ```
 auto-ai-article/
-  src/           ← 修改这里
-  dist/          ← npm run build 产出
-       ↑ symlink
-子站项目/node_modules/ai-article-pipeline → auto-ai-article/
+  src/              ← 修改这里
+  dist/             ← npm run build 产出
+       ↓ npm run sync-vendor
+子站项目/
+  vendor/ai-article-pipeline/
+    dist/           ← 提交到 git（CI 可用）
+    package.json    ← type: commonjs
+  node_modules/ai-article-pipeline → vendor/ai-article-pipeline（symlink）
 ```
 
 **更新流程**：
@@ -65,31 +71,20 @@ auto-ai-article/
 # 1. 修改库源码
 vim auto-ai-article/src/ai-fallback.ts
 
-# 2. 重新编译
-cd auto-ai-article && npm run build
+# 2. 编译 + 同步到所有消费项目（sync-vendor.cjs 中的 TARGETS 列表）
+cd auto-ai-article && npm run sync-vendor
 
-# 3. 各子站项目自动生效（symlink 实时指向新 dist/，无需 npm install）
+# 3. 各子站项目 git add vendor/ && git commit && git push（提交后 CI 部署生效）
 ```
 
-**当前引用项目一览**：
+**当前引用项目**（package.json 均为 `file:./vendor/ai-article-pipeline`）：
 
-| 项目 | package.json 路径 |
-| ------ | ------------------ |
-| 号卡/172, hm, yk, kd, hk, ksj, gc | `file:../../auto-ai-article` |
-| 信用卡/kahe, suishou, zhangshang | `file:../../auto-ai-article` |
-| 随身wifi/chaoneng, feilimao, gexing, liantong | `file:../../auto-ai-article` |
-| article-site | `file:../auto-ai-article` |
-
-**为何不用 vendored 副本**：
-
-| | file: symlink（推荐） | vendored 副本 |
-| --- | --- | --- |
-| 库更新后 | 自动生效 | 需手动 re-copy dist |
-| 版本一致性 | 始终同步 | 易漂移 |
-| 磁盘占用 | 无额外副本 | 每项目一份 |
-| 断网可构建 | ✅（本地路径） | ✅ |
-
-> 历史遗留的 `server/lib/ai-article-pipeline/` 或 `vendor/ai-article-pipeline/` 已全部移除，统一改用 `file:` 引用。
+| 分类 | 项目 |
+|------|------|
+| 号卡 | 172, hm, yk, kd, hk, ksj, gc |
+| 信用卡 | kahe, suishou, zhangshang |
+| 随身wifi | chaoneng-wifi, feilimao-wifi, gexing-wifi, liantong-wifi |
+| article-site | article-site |
 
 ---
 
