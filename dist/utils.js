@@ -393,10 +393,10 @@ exports.articleCss = `
 .block-image img { width: 100%; border-radius: 12px; display: block; }
 .block-image figcaption { font-size: 12px; color: var(--text-muted, #94a3b8); margin-top: 6px; text-align: center; }
 
-/* ad block */
-.ad-block { background: #fffbeb; border: 1px dashed #fcd34d; border-radius: 10px; padding: 12px 16px; margin: 12px 0; font-size: 14px; }
-.ad-block .ad-label { display: inline-block; background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; font-size: 11px; padding: 1px 10px; border-radius: 999px; margin-bottom: 6px; }
-.ad-block p { margin: 0 0 6px; }
+/* ad block（主题变量：--ad-bg/--ad-border/--ad-color/--ad-label-bg） */
+.ad-block { background: var(--ad-bg, #fffbeb); border: 1px dashed var(--ad-border, #fcd34d); border-radius: 10px; padding: 12px 16px; margin: 12px 0; font-size: 14px; }
+.ad-block .ad-label { display: inline-block; background: var(--ad-label-bg, linear-gradient(135deg, #f59e0b, #d97706)); color: #fff; font-size: 11px; padding: 1px 10px; border-radius: 999px; margin-bottom: 6px; }
+.ad-block p { margin: 0 0 6px; color: var(--ad-color, inherit); }
 .ad-block .ad-link { display: inline-block; margin-top: 6px; font-weight: 600; color: var(--primary, #2563eb); text-decoration: none; }
 
 /* CTA 卡片 */
