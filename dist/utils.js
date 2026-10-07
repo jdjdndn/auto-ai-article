@@ -20,6 +20,10 @@ exports.renderArticleLinks = renderArticleLinks;
 exports.renderFaqSection = renderFaqSection;
 exports.renderShareBar = renderShareBar;
 exports.articleJsonLd = articleJsonLd;
+exports.flattenToStrings = flattenToStrings;
+exports.flattenFaq = flattenFaq;
+exports.flattenLinks = flattenLinks;
+exports.safeArticle = safeArticle;
 exports.initArticleActions = initArticleActions;
 // —— JSON 提取（容忍 markdown 代码块包裹 / 前后多余文字）——
 /** 从候选字段中取第一个非空字符串（空串不能短路，否则会丢掉后面的真实内容） */
@@ -645,6 +649,43 @@ function articleJsonLd(article, site) {
         });
     }
     return JSON.stringify(ld);
+}
+// ============================================================
+// 文章数据安全解析（server 端用：DB 行 → 安全对象）
+// ============================================================
+/** 安全 JSON 解析（失败返回 []） */
+function flattenToStrings(v) {
+    if (Array.isArray(v))
+        return v;
+    if (typeof v === 'string') {
+        try {
+            const parsed = JSON.parse(v);
+            return Array.isArray(parsed) ? parsed : [];
+        }
+        catch {
+            return [];
+        }
+    }
+    return [];
+}
+/** 安全解析 FAQ（[{q,a}]） */
+function flattenFaq(v) {
+    const arr = flattenToStrings(v);
+    return arr.filter((f) => f?.q && f?.a);
+}
+/** 安全解析链接（[{label,url,kind}]） */
+function flattenLinks(v) {
+    const arr = flattenToStrings(v);
+    return arr.filter((l) => l?.url);
+}
+/** 安全解析文章行（content/links/faq 可能是 JSON 字符串或对象） */
+function safeArticle(row) {
+    return {
+        ...row,
+        content: flattenToStrings(row.content),
+        links: flattenLinks(row.links),
+        faq: flattenFaq(row.faq),
+    };
 }
 /**
  * 客户端事件委托绑定（仅浏览器环境调用）

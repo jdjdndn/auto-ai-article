@@ -631,6 +631,48 @@ export function articleJsonLd(article: {
   return JSON.stringify(ld)
 }
 
+// ============================================================
+// 文章数据安全解析（server 端用：DB 行 → 安全对象）
+// ============================================================
+
+/** 安全 JSON 解析（失败返回 []） */
+export function flattenToStrings(v: unknown): any[] {
+  if (Array.isArray(v)) return v
+  if (typeof v === 'string') {
+    try {
+      const parsed = JSON.parse(v)
+      return Array.isArray(parsed) ? parsed : []
+    } catch { return [] }
+  }
+  return []
+}
+
+/** 安全解析 FAQ（[{q,a}]） */
+export function flattenFaq(v: unknown): { q: string; a: string }[] {
+  const arr = flattenToStrings(v)
+  return arr.filter((f) => f?.q && f?.a)
+}
+
+/** 安全解析链接（[{label,url,kind}]） */
+export function flattenLinks(v: unknown): { label: string; url: string; kind?: string }[] {
+  const arr = flattenToStrings(v)
+  return arr.filter((l) => l?.url)
+}
+
+/** 安全解析文章行（content/links/faq 可能是 JSON 字符串或对象） */
+export function safeArticle<T extends Record<string, any>>(row: T): T & {
+  content: any[]
+  links: any[]
+  faq: any[]
+} {
+  return {
+    ...row,
+    content: flattenToStrings(row.content),
+    links: flattenLinks(row.links),
+    faq: flattenFaq(row.faq),
+  } as T & { content: any[]; links: any[]; faq: any[] }
+}
+
 /**
  * 客户端事件委托绑定（仅浏览器环境调用）
  * 绑定：更多折叠 / 复制链接 / 纠错按钮

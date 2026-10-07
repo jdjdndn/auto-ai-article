@@ -76,6 +76,25 @@ export declare function articleJsonLd(article: {
     url: string;
     logo?: string;
 }): string;
+/** 安全 JSON 解析（失败返回 []） */
+export declare function flattenToStrings(v: unknown): any[];
+/** 安全解析 FAQ（[{q,a}]） */
+export declare function flattenFaq(v: unknown): {
+    q: string;
+    a: string;
+}[];
+/** 安全解析链接（[{label,url,kind}]） */
+export declare function flattenLinks(v: unknown): {
+    label: string;
+    url: string;
+    kind?: string;
+}[];
+/** 安全解析文章行（content/links/faq 可能是 JSON 字符串或对象） */
+export declare function safeArticle<T extends Record<string, any>>(row: T): T & {
+    content: any[];
+    links: any[];
+    faq: any[];
+};
 /**
  * 客户端事件委托绑定（仅浏览器环境调用）
  * 绑定：更多折叠 / 复制链接 / 纠错按钮
