@@ -20,6 +20,10 @@ exports.renderArticleLinks = renderArticleLinks;
 exports.renderFaqSection = renderFaqSection;
 exports.renderShareBar = renderShareBar;
 exports.articleJsonLd = articleJsonLd;
+exports.organizationJsonLd = organizationJsonLd;
+exports.websiteJsonLd = websiteJsonLd;
+exports.productJsonLd = productJsonLd;
+exports.faqJsonLd = faqJsonLd;
 exports.flattenToStrings = flattenToStrings;
 exports.flattenFaq = flattenFaq;
 exports.flattenLinks = flattenLinks;
@@ -649,6 +653,57 @@ function articleJsonLd(article, site) {
         });
     }
     return JSON.stringify(ld);
+}
+// ============================================================
+// SEO JSON-LD 通用函数（参数化站点信息）
+// ============================================================
+/** Organization JSON-LD */
+function organizationJsonLd(site) {
+    return {
+        '@context': 'https://schema.org',
+        '@type': 'Organization',
+        name: site.name,
+        description: site.description,
+        url: site.url || undefined,
+        sameAs: site.sameAs?.length ? site.sameAs : undefined,
+    };
+}
+/** WebSite JSON-LD */
+function websiteJsonLd(site) {
+    return {
+        '@context': 'https://schema.org',
+        '@type': 'WebSite',
+        name: site.name,
+        description: site.description,
+        url: site.url || undefined,
+        inLanguage: 'zh-CN',
+    };
+}
+/** Product JSON-LD */
+function productJsonLd(product) {
+    return {
+        '@context': 'https://schema.org',
+        '@type': 'Product',
+        name: product.name,
+        description: product.description,
+        image: product.image || undefined,
+        brand: { '@type': 'Brand', name: product.brand || product.name },
+        ...(product.price ? { offers: { '@type': 'Offer', price: product.price, priceCurrency: 'CNY' } } : {}),
+    };
+}
+/** FAQPage JSON-LD */
+function faqJsonLd(items) {
+    if (!items?.length)
+        return null;
+    return {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: items.map((item) => ({
+            '@type': 'Question',
+            name: item.q,
+            acceptedAnswer: { '@type': 'Answer', text: item.a },
+        })),
+    };
 }
 // ============================================================
 // 文章数据安全解析（server 端用：DB 行 → 安全对象）

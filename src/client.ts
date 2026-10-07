@@ -16,6 +16,10 @@ export {
   renderFaqSection,
   renderShareBar,
   articleJsonLd,
+  organizationJsonLd,
+  websiteJsonLd,
+  productJsonLd,
+  faqJsonLd,
   initArticleActions,
 } from './utils.js'
 

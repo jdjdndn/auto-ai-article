@@ -76,6 +76,72 @@ export declare function articleJsonLd(article: {
     url: string;
     logo?: string;
 }): string;
+/** Organization JSON-LD */
+export declare function organizationJsonLd(site: {
+    name: string;
+    url?: string;
+    description?: string;
+    sameAs?: string[];
+}): {
+    '@context': string;
+    '@type': string;
+    name: string;
+    description: string | undefined;
+    url: string | undefined;
+    sameAs: string[] | undefined;
+};
+/** WebSite JSON-LD */
+export declare function websiteJsonLd(site: {
+    name: string;
+    url?: string;
+    description?: string;
+}): {
+    '@context': string;
+    '@type': string;
+    name: string;
+    description: string | undefined;
+    url: string | undefined;
+    inLanguage: string;
+};
+/** Product JSON-LD */
+export declare function productJsonLd(product: {
+    name: string;
+    description?: string;
+    brand?: string;
+    image?: string;
+    price?: string;
+}): {
+    offers?: {
+        '@type': string;
+        price: string;
+        priceCurrency: string;
+    } | undefined;
+    '@context': string;
+    '@type': string;
+    name: string;
+    description: string | undefined;
+    image: string | undefined;
+    brand: {
+        '@type': string;
+        name: string;
+    };
+};
+/** FAQPage JSON-LD */
+export declare function faqJsonLd(items: {
+    q: string;
+    a: string;
+}[]): {
+    '@context': string;
+    '@type': string;
+    mainEntity: {
+        '@type': string;
+        name: string;
+        acceptedAnswer: {
+            '@type': string;
+            text: string;
+        };
+    }[];
+} | null;
 /** 安全 JSON 解析（失败返回 []） */
 export declare function flattenToStrings(v: unknown): any[];
 /** 安全解析 FAQ（[{q,a}]） */
