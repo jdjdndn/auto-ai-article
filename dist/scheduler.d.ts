@@ -41,7 +41,7 @@ export declare class ArticleScheduler {
     }>;
     /** 设置下一天的 alarm */
     private scheduleNext;
-    /** 计算下一次 alarm 时间（固定时间，每天触发） */
+    /** 计算下一次 alarm 时间（固定时间，每天触发，UTC+8 中国时区） */
     private getNextAlarmTime;
 }
 /**

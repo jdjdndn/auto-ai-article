@@ -9,6 +9,7 @@ exports.startScheduler = startScheduler;
 const executor_js_1 = require("./executor.js");
 const schema_js_1 = require("./schema.js");
 const drizzle_orm_1 = require("drizzle-orm");
+const utils_js_1 = require("./utils.js");
 /**
  * ArticleScheduler — Durable Object class
  *
@@ -79,17 +80,18 @@ class ArticleScheduler {
         await this.ctx.storage.setAlarm(next);
         console.log(`[scheduler] 下次 alarm: ${new Date(next).toISOString()}`);
     }
-    /** 计算下一次 alarm 时间（固定时间，每天触发） */
+    /** 计算下一次 alarm 时间（固定时间，每天触发，UTC+8 中国时区） */
     getNextAlarmTime(timeStr) {
         const [hours, minutes] = timeStr.split(':').map(Number);
-        const now = new Date();
-        const target = new Date();
-        target.setHours(hours, minutes, 0, 0);
-        // 如果目标时间已过，设置为明天
+        // Workers 是 UTC，先 +8 偏移到中国时间再算
+        const now = new Date(Date.now() + 8 * 3600 * 1000);
+        const target = new Date(now);
+        target.setUTCHours(hours, minutes, 0, 0);
         if (target <= now) {
-            target.setDate(target.getDate() + 1);
+            target.setUTCDate(target.getUTCDate() + 1);
         }
-        return target.getTime();
+        // 减回 8 偏移，得到真实 UTC 时间戳
+        return target.getTime() - 8 * 3600 * 1000;
     }
 }
 exports.ArticleScheduler = ArticleScheduler;
@@ -143,6 +145,7 @@ function createPipelineDB(db) {
                 title: a.title,
                 summary: a.summary || '',
                 content: typeof a.content === 'string' ? a.content : JSON.stringify(a.content || []),
+                firstImage: (0, utils_js_1.firstImageOf)(typeof a.content === 'string' ? [] : (a.content || [])),
                 template: a.template || 'default',
                 category: a.category || '',
                 tags: typeof a.tags === 'string' ? a.tags : JSON.stringify(a.tags || []),
