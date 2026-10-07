@@ -47,28 +47,17 @@ function sanitizeBlocks(blocks: ContentBlock[]): ContentBlock[] {
     .filter((b): b is ContentBlock => b !== null)
 }
 
-// —— 默认 AI 客户端（OpenAI 兼容 HTTP）——
+// —— 默认 AI 客户端（复用 ai-fallback 的 OpenAI 兼容客户端）——
 
 function createDefaultAiClient(config: AiConfig): AiClient {
-  const baseUrl = (config.baseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '')
-  const apiKey = config.apiKey || ''
-  const model = config.model || 'gpt-4o-mini'
-  const maxTokens = config.maxTokens || 4096
-
-  return async (messages: AiMessage[]): Promise<string> => {
-    const res = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-      },
-      body: JSON.stringify({ model, messages, max_tokens: maxTokens, stream: false }),
-      signal: AbortSignal.timeout(180_000),
-    })
-    if (!res.ok) throw new Error(`AI API HTTP ${res.status}: ${await res.text().catch(() => '')}`)
-    const data: any = await res.json()
-    return data?.choices?.[0]?.message?.content ?? ''
-  }
+  return createAiClient({
+    openai: {
+      baseUrl: config.baseUrl || 'https://api.openai.com/v1',
+      apiKey: config.apiKey || '',
+      model: config.model || 'gpt-4o-mini',
+      maxTokens: config.maxTokens || 4096,
+    },
+  })
 }
 
 // —— 重试工具 ——

@@ -41,27 +41,16 @@ function sanitizeBlocks(blocks) {
     })
         .filter((b) => b !== null);
 }
-// —— 默认 AI 客户端（OpenAI 兼容 HTTP）——
+// —— 默认 AI 客户端（复用 ai-fallback 的 OpenAI 兼容客户端）——
 function createDefaultAiClient(config) {
-    const baseUrl = (config.baseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '');
-    const apiKey = config.apiKey || '';
-    const model = config.model || 'gpt-4o-mini';
-    const maxTokens = config.maxTokens || 4096;
-    return async (messages) => {
-        const res = await fetch(`${baseUrl}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-            },
-            body: JSON.stringify({ model, messages, max_tokens: maxTokens, stream: false }),
-            signal: AbortSignal.timeout(180_000),
-        });
-        if (!res.ok)
-            throw new Error(`AI API HTTP ${res.status}: ${await res.text().catch(() => '')}`);
-        const data = await res.json();
-        return data?.choices?.[0]?.message?.content ?? '';
-    };
+    return (0, ai_fallback_js_1.createAiClient)({
+        openai: {
+            baseUrl: config.baseUrl || 'https://api.openai.com/v1',
+            apiKey: config.apiKey || '',
+            model: config.model || 'gpt-4o-mini',
+            maxTokens: config.maxTokens || 4096,
+        },
+    });
 }
 const defaultSleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function withRetry(fn, retries, label, sleep = defaultSleep) {
