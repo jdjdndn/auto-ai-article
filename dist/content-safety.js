@@ -156,24 +156,18 @@ function replaceViolatingWords(text, rules = DEFAULT_RULES) {
     let replaced = false;
     for (const rule of rules) {
         for (const w of rule.words) {
-            if (result.includes(w)) {
-                // 保留首字，后续用 * 替代
-                const mask = w[0] + '*'.repeat(Math.max(0, w.length - 1));
-                result = result.replaceAll(w, mask);
-                replaced = true;
-            }
-        }
-    }
-    // 替换后二次扫描：防止新组合产生违规词
-    if (replaced) {
-        const remaining = scanText(result, rules);
-        if (remaining.length) {
-            for (const hit of remaining) {
-                const w = hit.word;
-                if (result.includes(w)) {
-                    const mask = w[0] + '*'.repeat(Math.max(0, w.length - 1));
-                    result = result.replaceAll(w, mask);
+            let idx = result.indexOf(w);
+            while (idx !== -1) {
+                // 豁免上下文："不要赌博"不替换
+                const before = result.slice(Math.max(0, idx - 10), idx);
+                if (EXEMPT_PREFIXES.some(p => before.includes(p))) {
+                    idx = result.indexOf(w, idx + w.length);
+                    continue;
                 }
+                const mask = w[0] + '*'.repeat(Math.max(0, w.length - 1));
+                result = result.slice(0, idx) + mask + result.slice(idx + w.length);
+                replaced = true;
+                idx = result.indexOf(w, idx + mask.length);
             }
         }
     }
