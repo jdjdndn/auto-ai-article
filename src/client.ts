@@ -12,6 +12,9 @@ export {
   articleCss,
   firstImageOf,
   normalizeContentBlocks,
+  renderArticleLinks,
+  renderFaqSection,
+  renderShareBar,
 } from './utils.js'
 
-export type { ContentBlock, CtaConfig } from './types.js'
+export type { ContentBlock, CtaConfig, LinkItem, FaqItem } from './types.js'

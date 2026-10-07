@@ -1,2 +1,2 @@
-export { escapeHtml, renderArticleBlocks, renderArticleCta, generateToc, readingTime, articleCss, firstImageOf, normalizeContentBlocks, } from './utils.js';
-export type { ContentBlock, CtaConfig } from './types.js';
+export { escapeHtml, renderArticleBlocks, renderArticleCta, generateToc, readingTime, articleCss, firstImageOf, normalizeContentBlocks, renderArticleLinks, renderFaqSection, renderShareBar, } from './utils.js';
+export type { ContentBlock, CtaConfig, LinkItem, FaqItem } from './types.js';

@@ -365,6 +365,29 @@ export const articleCss = `
 .btn-primary-cta:hover { opacity: .9; }
 .btn-secondary-cta { display: inline-block; padding: 12px 28px; background: #fff; color: var(--primary, #2563eb); border: 1px solid var(--primary, #2563eb); border-radius: 10px; text-decoration: none; font-size: 15px; font-weight: 600; transition: background .2s; }
 .btn-secondary-cta:hover { background: var(--primary-weak, #eff6ff); }
+
+/* 链接区 */
+.article-links { margin: 20px 0; }
+.article-links .ad-note { display: block; font-size: 12px; color: var(--text-muted, #94a3b8); margin-bottom: 10px; }
+.article-links .ad-badge { background: #fef3c7; color: #92400e; font-size: 11px; padding: 1px 8px; border-radius: 4px; margin-right: 4px; }
+.article-links .link-btn { display: inline-block; padding: 10px 24px; background: linear-gradient(180deg, var(--primary, #2563eb), var(--primary-strong, #1d4ed8)); color: #fff; border-radius: 10px; text-decoration: none; font-size: 14px; font-weight: 500; margin-right: 8px; margin-bottom: 8px; }
+.article-links .more-wrap { margin-top: 8px; }
+.article-links .more-toggle { background: none; border: none; color: var(--primary, #2563eb); cursor: pointer; font-size: 13px; text-decoration: underline; }
+.article-links .more-list { margin-top: 8px; }
+.article-links .more-list .more-link { display: block; padding: 6px 0; color: var(--primary, #2563eb); text-decoration: none; font-size: 13px; }
+
+/* FAQ */
+.article-faq { margin: 22px 0; padding: 20px 24px; background: var(--card-bg, #fff); border-radius: 10px; }
+.article-faq h2 { font-size: 17px; margin-bottom: 10px; }
+.article-faq details { border-radius: 10px; padding: 4px 10px; margin: 8px 0; }
+.article-faq details[open] { background: #f9fafb; }
+.article-faq summary { cursor: pointer; font-weight: 600; padding: 8px 2px; }
+.article-faq details p { color: var(--text-muted, #64748b); margin: 2px 0 10px 18px; font-size: 14px; }
+
+/* 分享栏 */
+.share-bar { display: flex; gap: 12px; justify-content: center; margin: 20px 0; }
+.share-bar .share-btn { padding: 8px 20px; background: #fff; border: 1px solid var(--primary, #2563eb); color: var(--primary, #2563eb); border-radius: 10px; cursor: pointer; font-size: 13px; }
+.share-bar .share-btn:hover { background: var(--primary-weak, #eff6ff); }
 `
 
 /** HTML 转义，防 XSS */
@@ -474,4 +497,66 @@ export function renderArticleCta(config: CtaConfig | undefined): string {
   }
   html += `</div></section>`
   return html
+}
+
+// ============================================================
+// 文章页周边组件：链接区 / FAQ / 分享栏（纯 HTML，事件用 data-action 委托）
+// ============================================================
+
+/** 链接项 */
+export interface LinkItem {
+  id?: string | number
+  label: string
+  url: string
+  kind?: string  // 'more' = 收进折叠
+}
+
+/** 渲染推广链接区（主按钮常显 + 更多折叠） */
+export function renderArticleLinks(links: unknown, opts: { note?: string } = {}): string {
+  if (!Array.isArray(links) || !links.length) return ''
+  const main = (links as LinkItem[]).filter((l) => l.kind !== 'more')
+  const more = (links as LinkItem[]).filter((l) => l.kind === 'more')
+  const note = opts.note || '以下链接为第三方推广，请按需理性消费'
+  let html = `<div class="article-links"><span class="ad-note"><b class="ad-badge">广告</b>${escapeHtml(note)}</span>`
+  for (const l of main) {
+    if (!l.url || /example\.com|test\.com/.test(l.url)) continue
+    html += `<a href="${escapeHtml(l.url)}" target="_blank" rel="noopener nofollow sponsored noreferrer" class="link-btn" data-track-click="${escapeHtml(l.id ? String(l.id) : '')}">${escapeHtml(l.label || '立即办理')}</a>`
+  }
+  if (more.length) {
+    html += `<div class="more-wrap"><button class="more-toggle" data-action="toggle-more">${more.length} 个更多</button><div class="more-list" hidden>`
+    for (const l of more) {
+      if (!l.url || /example\.com|test\.com/.test(l.url)) continue
+      html += `<a href="${escapeHtml(l.url)}" target="_blank" rel="noopener nofollow sponsored noreferrer" class="more-link" data-track-click="${escapeHtml(l.id ? String(l.id) : '')}">${escapeHtml(l.label || '')}</a>`
+    }
+    html += `</div></div>`
+  }
+  html += `</div>`
+  return html
+}
+
+/** FAQ 项 */
+export interface FaqItem {
+  q: string
+  a: string
+}
+
+/** 渲染 FAQ 折叠面板 */
+export function renderFaqSection(faq: unknown): string {
+  if (!Array.isArray(faq) || !faq.length) return ''
+  let html = `<section class="article-faq"><h2>常见问题</h2>`
+  for (const f of faq as FaqItem[]) {
+    if (!f?.q || !f?.a) continue
+    html += `<details><summary>${escapeHtml(f.q)}</summary><p>${escapeHtml(f.a)}</p></details>`
+  }
+  html += `</section>`
+  return html
+}
+
+/** 分享/收藏/纠错按钮栏 */
+export function renderShareBar(article: { id: string; title: string; summary?: string }, opts: { shareUrl?: string } = {}): string {
+  const url = opts.shareUrl || ''
+  return `<div class="share-bar">
+    <button class="share-btn" data-action="copy-link" data-url="${escapeHtml(url)}" data-title="${escapeHtml(article.title)}" data-summary="${escapeHtml(article.summary || '')}">复制链接</button>
+    <button class="share-btn" data-action="report">内容有误？反馈</button>
+  </div>`
 }
