@@ -64,7 +64,7 @@ if (!sync.ok) {
 
 // Step 2.5: 同步 rebuild-all.cjs 母本到各站
 console.log('\n[2.5/5] Sync rebuild-all.cjs to stations...');
-const rootRebuild = path.join(CODE_ROOT, 'rebuild-all.cjs');
+const rootRebuild = path.join(LIB_DIR, 'rebuild-all.cjs');
 if (fs.existsSync(rootRebuild)) {
   for (const s of STATIONS) {
     const dest = path.join(s, 'rebuild-all.cjs');
