@@ -45,6 +45,11 @@ const DEFAULT_RULES = [
         words: ['未成年色情', '幼女', '恋童', '儿童色情', '未成年裸聊'],
     },
 ];
+/**
+ * 豁免上下文：违规词出现在这些词附近时视为正面提醒，不命中。
+ * 例如"不要赌博"、"远离刷单诈骗"、"警惕杀猪盘"是正确的反诈提醒。
+ */
+const EXEMPT_PREFIXES = ['不要', '别', '远离', '警惕', '谨防', '小心', '切勿', '严禁', '禁止', '防范', '打击', '整治', '拒绝', '抵制', '反', '防'];
 /** 对一段文本做类别关键词扫描 */
 function scanText(text, rules = DEFAULT_RULES) {
     const hits = [];
@@ -52,7 +57,19 @@ function scanText(text, rules = DEFAULT_RULES) {
         return hits;
     for (const rule of rules) {
         for (const w of rule.words) {
-            if (text.includes(w)) {
+            let idx = text.indexOf(w);
+            let found = false;
+            while (idx !== -1) {
+                // 检查前面 6 个字符内是否有豁免词
+                const before = text.slice(Math.max(0, idx - 6), idx);
+                const exempted = EXEMPT_PREFIXES.some(p => before.endsWith(p));
+                if (!exempted) {
+                    found = true;
+                    break;
+                }
+                idx = text.indexOf(w, idx + w.length);
+            }
+            if (found) {
                 hits.push({ cat: rule.cat, label: rule.label, word: w });
                 break; // 每类最多记一个命中词
             }

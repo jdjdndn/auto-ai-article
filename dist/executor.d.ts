@@ -17,6 +17,8 @@ export interface ExecutorConfig extends PipelineConfig {
     hasLocalRunToday?: () => Promise<boolean>;
     /** 运行日志上报函数 */
     reportRun?: (log: RunLogInput) => Promise<void>;
+    /** 自定义 logger（默认 console.log） */
+    logger?: (...args: unknown[]) => void;
 }
 export interface ExecutorResult {
     mode: 'local' | 'cloud' | 'skipped';

@@ -25,6 +25,8 @@ export interface ExecutorConfig extends PipelineConfig {
   hasLocalRunToday?: () => Promise<boolean>
   /** 运行日志上报函数 */
   reportRun?: (log: RunLogInput) => Promise<void>
+  /** 自定义 logger（默认 console.log） */
+  logger?: (...args: unknown[]) => void
 }
 
 export interface ExecutorResult {
@@ -88,7 +90,7 @@ export async function execute(db: PipelineDB, config: ExecutorConfig = {}): Prom
   const localGateway = config.localGateway ?? 'http://localhost:3456/v1'
   const localModel = config.localModel ?? 'deepseek-chat'
   const dryRun = config.dryRun ?? false
-  const log = (...args: unknown[]) => console.log(new Date().toISOString(), '[executor]', ...args)
+  const log = config.logger || ((...args: unknown[]) => console.log(new Date().toISOString(), '[executor]', ...args))
 
   // 1. 检查今日配额
   if (config.getPublishedToday) {

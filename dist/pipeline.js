@@ -63,8 +63,8 @@ function createDefaultAiClient(config) {
         return data?.choices?.[0]?.message?.content ?? '';
     };
 }
-// —— 重试工具 ——
-async function withRetry(fn, retries, label) {
+const defaultSleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function withRetry(fn, retries, label, sleep = defaultSleep) {
     let lastErr;
     for (let i = 0; i <= retries; i++) {
         try {
@@ -73,12 +73,31 @@ async function withRetry(fn, retries, label) {
         catch (e) {
             lastErr = e;
             if (i < retries) {
-                const delay = 1000 * (i + 1);
-                await new Promise((r) => setTimeout(r, delay));
+                await sleep(1000 * (i + 1));
             }
         }
     }
     throw lastErr;
+}
+/** 简单并发限制：并发执行 tasks，最多同时 limit 个 */
+async function mapWithConcurrency(tasks, limit, fn) {
+    const results = new Array(tasks.length);
+    let nextIdx = 0;
+    async function worker() {
+        while (nextIdx < tasks.length) {
+            const i = nextIdx++;
+            try {
+                const value = await fn(tasks[i], i);
+                results[i] = { status: 'fulfilled', value };
+            }
+            catch (reason) {
+                results[i] = { status: 'rejected', reason };
+            }
+        }
+    }
+    const workers = Array.from({ length: Math.min(limit, tasks.length) }, worker);
+    await Promise.all(workers);
+    return results;
 }
 function createPipeline(db, config = {}) {
     const target = config.target ?? 3;
@@ -235,7 +254,7 @@ function createPipeline(db, config = {}) {
         // 4. 生成 + 安全处理
         const targets = list.slice(0, target);
         result.total = targets.length;
-        const outcomes = await Promise.allSettled(targets.map(async (s) => {
+        const outcomes = await mapWithConcurrency(targets, 3, async (s) => {
             const raw = String(s.raw || '');
             if (raw.length < 8) {
                 await db.markSeedFailed(s.id, '素材过短').catch(() => { });
@@ -256,7 +275,7 @@ function createPipeline(db, config = {}) {
             }
             await db.markSeedFailed(s.id, res?.error || '入库失败');
             throw new Error(res?.error || '入库失败');
-        }));
+        });
         // 5. 汇总
         for (const o of outcomes) {
             if (o.status === 'fulfilled') {

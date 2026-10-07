@@ -3,7 +3,7 @@ import { type ExecutorConfig } from './executor.js';
 export interface SchedulerConfig {
     /** 目标时间（如 "08:00"），默认 "08:00" */
     time?: string;
-    /** 执行器配置 */
+    /** 执行器配置（dailyTarget/ai 等从这里读，不硬编码） */
     executorConfig?: ExecutorConfig;
 }
 /**

@@ -56,7 +56,7 @@ async function execute(db, config = {}) {
     const localGateway = config.localGateway ?? 'http://localhost:3456/v1';
     const localModel = config.localModel ?? 'deepseek-chat';
     const dryRun = config.dryRun ?? false;
-    const log = (...args) => console.log(new Date().toISOString(), '[executor]', ...args);
+    const log = config.logger || ((...args) => console.log(new Date().toISOString(), '[executor]', ...args));
     // 1. 检查今日配额
     if (config.getPublishedToday) {
         const done = await config.getPublishedToday();

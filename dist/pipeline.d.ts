@@ -1,4 +1,6 @@
 import type { Seed, SeedInput, GeneratedArticle, InsertResult, PipelineConfig, PipelineRunResult, TopicSuggestion, RunLogInput } from './types.js';
+/** 可注入的 sleep 函数（Workers alarm 里需用 ctx.waitUntil） */
+export type SleepFn = (ms: number) => Promise<void>;
 export interface Pipeline {
     /** AI 自动选题（返回选题列表，不入库） */
     suggestTopics(): Promise<TopicSuggestion[]>;

@@ -3,43 +3,12 @@
 // 定时调度器 — 基于 Cloudflare Durable Objects Alarms
 // 每天固定时间触发文章生成，无需 cron triggers
 // ============================================================
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ArticleScheduler = void 0;
 exports.startScheduler = startScheduler;
 const executor_js_1 = require("./executor.js");
+const schema_js_1 = require("./schema.js");
+const drizzle_orm_1 = require("drizzle-orm");
 /**
  * ArticleScheduler — Durable Object class
  *
@@ -71,10 +40,9 @@ class ArticleScheduler {
         try {
             const db = this.env.DB;
             const pipelineDB = createPipelineDB(db);
-            const result = await (0, executor_js_1.execute)(pipelineDB, {
-                dailyTarget: 3,
-                ai: { model: '@cf/qwen/qwen3-30b-a3b-fp8' },
-            });
+            // 配置从 this.config 读，不硬编码
+            const cfg = this._config || {};
+            const result = await (0, executor_js_1.execute)(pipelineDB, cfg.executorConfig || {});
             console.log(`[scheduler] 执行完成:`, result);
         }
         catch (e) {
@@ -85,6 +53,8 @@ class ArticleScheduler {
     }
     /** 启动调度器 — 设置第一次 alarm */
     async start(config = {}) {
+        ;
+        this._config = config;
         const existing = await this.ctx.storage.getAlarm();
         if (existing) {
             console.log(`[scheduler] alarm 已存在: ${new Date(existing).toISOString()}`);
@@ -127,15 +97,12 @@ exports.ArticleScheduler = ArticleScheduler;
 function createPipelineDB(db) {
     return {
         async fetchPendingSeeds(size) {
-            const { seeds } = await Promise.resolve().then(() => __importStar(require('./schema.js')));
-            const { eq, desc } = await Promise.resolve().then(() => __importStar(require('drizzle-orm')));
-            return db.select().from(seeds)
-                .where(eq(seeds.status, 'pending'))
-                .orderBy(desc(seeds.id))
+            return db.select().from(schema_js_1.seeds)
+                .where((0, drizzle_orm_1.eq)(schema_js_1.seeds.status, 'pending'))
+                .orderBy((0, drizzle_orm_1.desc)(schema_js_1.seeds.id))
                 .limit(size);
         },
         async insertSeeds(items, source) {
-            const { seeds } = await Promise.resolve().then(() => __importStar(require('./schema.js')));
             const now = new Date().toISOString();
             const rows = items
                 .filter(it => it.raw?.length >= 8)
@@ -150,57 +117,53 @@ function createPipelineDB(db) {
             }));
             if (!rows.length)
                 return { added: 0 };
-            await db.insert(seeds).values(rows);
+            await db.insert(schema_js_1.seeds).values(rows);
             return { added: rows.length };
         },
         async markSeedDone(id, articleId) {
-            const { seeds } = await Promise.resolve().then(() => __importStar(require('./schema.js')));
-            const { eq } = await Promise.resolve().then(() => __importStar(require('drizzle-orm')));
-            await db.update(seeds).set({
+            await db.update(schema_js_1.seeds).set({
                 status: 'done',
                 articleId,
                 error: null,
                 updatedAt: new Date().toISOString(),
-            }).where(eq(seeds.id, id));
+            }).where((0, drizzle_orm_1.eq)(schema_js_1.seeds.id, id));
         },
         async markSeedFailed(id, error) {
-            const { seeds } = await Promise.resolve().then(() => __importStar(require('./schema.js')));
-            const { eq } = await Promise.resolve().then(() => __importStar(require('drizzle-orm')));
-            await db.update(seeds).set({
+            await db.update(schema_js_1.seeds).set({
                 status: 'failed',
                 error: String(error).slice(0, 500),
                 updatedAt: new Date().toISOString(),
-            }).where(eq(seeds.id, id));
+            }).where((0, drizzle_orm_1.eq)(schema_js_1.seeds.id, id));
         },
         async insertArticles(articlesList) {
-            const { articles } = await Promise.resolve().then(() => __importStar(require('./schema.js')));
             const results = [];
-            for (const a of articlesList) {
-                try {
-                    const id = `a-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-                    await db.insert(articles).values({
-                        id,
-                        title: a.title,
-                        summary: a.summary || '',
-                        content: typeof a.content === 'string' ? a.content : JSON.stringify(a.content || []),
-                        template: a.template || 'default',
-                        category: a.category || '',
-                        tags: typeof a.tags === 'string' ? a.tags : JSON.stringify(a.tags || []),
-                        status: a.status || 'published',
-                        publishAt: a.publishAt || null,
-                        expiresAt: a.expiresAt || null,
-                        links: typeof a.links === 'string' ? a.links : JSON.stringify(a.links || []),
-                        friendLinks: typeof a.friendLinks === 'string' ? a.friendLinks : JSON.stringify(a.friendLinks || []),
-                        relatedIds: typeof a.relatedIds === 'string' ? a.relatedIds : JSON.stringify(a.relatedIds || []),
-                        faq: typeof a.faq === 'string' ? a.faq : JSON.stringify(a.faq || []),
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString(),
-                    });
-                    results.push({ id, ok: true });
-                }
-                catch (e) {
-                    results.push({ id: '', ok: false, error: e.message });
-                }
+            const now = new Date().toISOString();
+            const rows = articlesList.map((a) => ({
+                id: `a-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                title: a.title,
+                summary: a.summary || '',
+                content: typeof a.content === 'string' ? a.content : JSON.stringify(a.content || []),
+                template: a.template || 'default',
+                category: a.category || '',
+                tags: typeof a.tags === 'string' ? a.tags : JSON.stringify(a.tags || []),
+                status: a.status || 'published',
+                publishAt: a.publishAt || null,
+                expiresAt: a.expiresAt || null,
+                links: typeof a.links === 'string' ? a.links : JSON.stringify(a.links || []),
+                friendLinks: typeof a.friendLinks === 'string' ? a.friendLinks : JSON.stringify(a.friendLinks || []),
+                relatedIds: typeof a.relatedIds === 'string' ? a.relatedIds : JSON.stringify(a.relatedIds || []),
+                faq: typeof a.faq === 'string' ? a.faq : JSON.stringify(a.faq || []),
+                createdAt: now,
+                updatedAt: now,
+            }));
+            try {
+                await db.insert(schema_js_1.articles).values(rows);
+                for (const r of rows)
+                    results.push({ id: r.id, ok: true });
+            }
+            catch (e) {
+                for (const r of rows)
+                    results.push({ id: r.id, ok: false, error: e.message });
             }
             return {
                 total: articlesList.length,
@@ -210,8 +173,7 @@ function createPipelineDB(db) {
             };
         },
         async insertRunLog(log) {
-            const { runLogs } = await Promise.resolve().then(() => __importStar(require('./schema.js')));
-            await db.insert(runLogs).values({
+            await db.insert(schema_js_1.runLogs).values({
                 runAt: log.runAt || new Date().toISOString(),
                 model: log.model || '',
                 total: log.total || 0,

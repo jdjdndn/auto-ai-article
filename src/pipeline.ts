@@ -73,7 +73,12 @@ function createDefaultAiClient(config: AiConfig): AiClient {
 
 // —— 重试工具 ——
 
-async function withRetry<T>(fn: () => Promise<T>, retries: number, label: string): Promise<T> {
+/** 可注入的 sleep 函数（Workers alarm 里需用 ctx.waitUntil） */
+export type SleepFn = (ms: number) => Promise<void>
+
+const defaultSleep: SleepFn = (ms) => new Promise((r) => setTimeout(r, ms))
+
+async function withRetry<T>(fn: () => Promise<T>, retries: number, label: string, sleep: SleepFn = defaultSleep): Promise<T> {
   let lastErr: Error | undefined
   for (let i = 0; i <= retries; i++) {
     try {
@@ -81,12 +86,31 @@ async function withRetry<T>(fn: () => Promise<T>, retries: number, label: string
     } catch (e: any) {
       lastErr = e
       if (i < retries) {
-        const delay = 1000 * (i + 1)
-        await new Promise((r) => setTimeout(r, delay))
+        await sleep(1000 * (i + 1))
       }
     }
   }
   throw lastErr!
+}
+
+/** 简单并发限制：并发执行 tasks，最多同时 limit 个 */
+async function mapWithConcurrency<T, R>(tasks: T[], limit: number, fn: (t: T, i: number) => Promise<R>): Promise<PromiseSettledResult<R>[]> {
+  const results: PromiseSettledResult<R>[] = new Array(tasks.length)
+  let nextIdx = 0
+  async function worker() {
+    while (nextIdx < tasks.length) {
+      const i = nextIdx++
+      try {
+        const value = await fn(tasks[i], i)
+        results[i] = { status: 'fulfilled', value }
+      } catch (reason: any) {
+        results[i] = { status: 'rejected', reason }
+      }
+    }
+  }
+  const workers = Array.from({ length: Math.min(limit, tasks.length) }, worker)
+  await Promise.all(workers)
+  return results
 }
 
 // —— 管线核心 ——
@@ -288,7 +312,7 @@ export function createPipeline(db: PipelineDB, config: PipelineConfig = {}): Pip
     const targets = list.slice(0, target)
     result.total = targets.length
 
-    const outcomes = await Promise.allSettled(targets.map(async (s) => {
+    const outcomes = await mapWithConcurrency(targets, 3, async (s) => {
       const raw = String(s.raw || '')
       if (raw.length < 8) {
         await db.markSeedFailed(s.id, '素材过短').catch(() => {})
@@ -312,7 +336,7 @@ export function createPipeline(db: PipelineDB, config: PipelineConfig = {}): Pip
       }
       await db.markSeedFailed(s.id, res?.error || '入库失败')
       throw new Error(res?.error || '入库失败')
-    }))
+    })
 
     // 5. 汇总
     for (const o of outcomes) {

@@ -4,12 +4,14 @@
 // ============================================================
 
 import { execute, type ExecutorConfig } from './executor.js'
+import { articles, seeds, runLogs } from './schema.js'
+import { eq, desc } from 'drizzle-orm'
 
 /** 调度器配置 */
 export interface SchedulerConfig {
   /** 目标时间（如 "08:00"），默认 "08:00" */
   time?: string
-  /** 执行器配置 */
+  /** 执行器配置（dailyTarget/ai 等从这里读，不硬编码） */
   executorConfig?: ExecutorConfig
 }
 
@@ -47,11 +49,9 @@ export class ArticleScheduler {
     try {
       const db = this.env.DB
       const pipelineDB = createPipelineDB(db)
-
-      const result = await execute(pipelineDB, {
-        dailyTarget: 3,
-        ai: { model: '@cf/qwen/qwen3-30b-a3b-fp8' },
-      })
+      // 配置从 this.config 读，不硬编码
+      const cfg = (this as any)._config || {}
+      const result = await execute(pipelineDB, cfg.executorConfig || {})
 
       console.log(`[scheduler] 执行完成:`, result)
     } catch (e: any) {
@@ -64,6 +64,7 @@ export class ArticleScheduler {
 
   /** 启动调度器 — 设置第一次 alarm */
   async start(config: SchedulerConfig = {}) {
+    ;(this as any)._config = config
     const existing = await this.ctx.storage.getAlarm()
     if (existing) {
       console.log(`[scheduler] alarm 已存在: ${new Date(existing).toISOString()}`)
@@ -113,8 +114,6 @@ export class ArticleScheduler {
 function createPipelineDB(db: any) {
   return {
     async fetchPendingSeeds(size: number) {
-      const { seeds } = await import('./schema.js')
-      const { eq, desc } = await import('drizzle-orm')
       return db.select().from(seeds)
         .where(eq(seeds.status, 'pending'))
         .orderBy(desc(seeds.id))
@@ -122,7 +121,6 @@ function createPipelineDB(db: any) {
     },
 
     async insertSeeds(items: Array<{ raw: string; category?: string; template?: string }>, source: string) {
-      const { seeds } = await import('./schema.js')
       const now = new Date().toISOString()
       const rows = items
         .filter(it => it.raw?.length >= 8)
@@ -142,8 +140,6 @@ function createPipelineDB(db: any) {
     },
 
     async markSeedDone(id: number, articleId: string) {
-      const { seeds } = await import('./schema.js')
-      const { eq } = await import('drizzle-orm')
       await db.update(seeds).set({
         status: 'done',
         articleId,
@@ -153,8 +149,6 @@ function createPipelineDB(db: any) {
     },
 
     async markSeedFailed(id: number, error: string) {
-      const { seeds } = await import('./schema.js')
-      const { eq } = await import('drizzle-orm')
       await db.update(seeds).set({
         status: 'failed',
         error: String(error).slice(0, 500),
@@ -163,36 +157,32 @@ function createPipelineDB(db: any) {
     },
 
     async insertArticles(articlesList: any[]) {
-      const { articles } = await import('./schema.js')
       const results: Array<{ id: string; ok: boolean; error?: string }> = []
-
-      for (const a of articlesList) {
-        try {
-          const id = `a-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-          await db.insert(articles).values({
-            id,
-            title: a.title,
-            summary: a.summary || '',
-            content: typeof a.content === 'string' ? a.content : JSON.stringify(a.content || []),
-            template: a.template || 'default',
-            category: a.category || '',
-            tags: typeof a.tags === 'string' ? a.tags : JSON.stringify(a.tags || []),
-            status: a.status || 'published',
-            publishAt: a.publishAt || null,
-            expiresAt: a.expiresAt || null,
-            links: typeof a.links === 'string' ? a.links : JSON.stringify(a.links || []),
-            friendLinks: typeof a.friendLinks === 'string' ? a.friendLinks : JSON.stringify(a.friendLinks || []),
-            relatedIds: typeof a.relatedIds === 'string' ? a.relatedIds : JSON.stringify(a.relatedIds || []),
-            faq: typeof a.faq === 'string' ? a.faq : JSON.stringify(a.faq || []),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          })
-          results.push({ id, ok: true })
-        } catch (e: any) {
-          results.push({ id: '', ok: false, error: e.message })
-        }
+      const now = new Date().toISOString()
+      const rows = articlesList.map((a) => ({
+        id: `a-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        title: a.title,
+        summary: a.summary || '',
+        content: typeof a.content === 'string' ? a.content : JSON.stringify(a.content || []),
+        template: a.template || 'default',
+        category: a.category || '',
+        tags: typeof a.tags === 'string' ? a.tags : JSON.stringify(a.tags || []),
+        status: a.status || 'published',
+        publishAt: a.publishAt || null,
+        expiresAt: a.expiresAt || null,
+        links: typeof a.links === 'string' ? a.links : JSON.stringify(a.links || []),
+        friendLinks: typeof a.friendLinks === 'string' ? a.friendLinks : JSON.stringify(a.friendLinks || []),
+        relatedIds: typeof a.relatedIds === 'string' ? a.relatedIds : JSON.stringify(a.relatedIds || []),
+        faq: typeof a.faq === 'string' ? a.faq : JSON.stringify(a.faq || []),
+        createdAt: now,
+        updatedAt: now,
+      }))
+      try {
+        await db.insert(articles).values(rows)
+        for (const r of rows) results.push({ id: r.id, ok: true })
+      } catch (e: any) {
+        for (const r of rows) results.push({ id: r.id, ok: false, error: e.message })
       }
-
       return {
         total: articlesList.length,
         created: results.filter(r => r.ok).length,
@@ -202,7 +192,6 @@ function createPipelineDB(db: any) {
     },
 
     async insertRunLog(log: { runAt?: string; model?: string; total?: number; ok?: number; fail?: number; error?: string | null; dryRun?: boolean }) {
-      const { runLogs } = await import('./schema.js')
       await db.insert(runLogs).values({
         runAt: log.runAt || new Date().toISOString(),
         model: log.model || '',
