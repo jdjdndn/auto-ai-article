@@ -470,14 +470,30 @@ function renderBlock(block, h2Idx) {
                 `</div>`;
         case 'quote':
             return `<div class="block-quote ${block.tone === 'warn' ? 'warn' : 'info'}">${escapeHtml(block.text)}</div>`;
-        case 'image':
-            return `<figure class="block-image"><img src="${escapeHtml(block.url)}" alt="${escapeHtml(block.alt || '')}" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'" />` +
+        case 'image': {
+            const url = block.url || '';
+            if (/example\.com|test\.com|placeholder/.test(url))
+                return ''; // 占位图丢弃
+            return `<figure class="block-image"><img src="${escapeHtml(url)}" alt="${escapeHtml(block.alt || '')}" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'" />` +
                 `<figcaption>${block.caption ? escapeHtml(block.caption) + ' · ' : ''}图源：网络</figcaption></figure>`;
-        case 'ad':
+        }
+        case 'video': {
+            const url = block.url || '';
+            if (/example\.com|test\.com|placeholder/.test(url))
+                return '';
+            return `<figure class="block-image"><video src="${escapeHtml(url)}" controls preload="metadata" style="width:100%;border-radius:12px;display:block"></video>` +
+                (block.title ? `<figcaption>${escapeHtml(block.title)}</figcaption>` : '') +
+                `</figure>`;
+        }
+        case 'ad': {
+            // 占位链接的 ad block 整个丢弃
+            if (block.link && /example\.com|test\.com|placeholder|yourlink/.test(block.link))
+                return '';
             return `<div class="ad-block"><span class="ad-label">${escapeHtml(block.label || '推荐')}</span>` +
                 `<p>${escapeHtml(block.text)}</p>` +
                 (block.link ? `<a href="${escapeHtml(block.link)}" target="_blank" rel="noopener nofollow" class="ad-link">去看看 →</a>` : '') +
                 `</div>`;
+        }
         default:
             return '';
     }
