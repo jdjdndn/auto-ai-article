@@ -10,6 +10,8 @@ export interface AiModel {
     description: string;
     /** 是否适合中文长文 */
     chineseOptimized: boolean;
+    /** 是否关闭思考模式（chat_template_kwargs.thinking=false；仅支持该参数的模型标记） */
+    noThinking?: boolean;
 }
 export declare const FREE_TEXT_MODELS: AiModel[];
 export type FallbackReason = 'quota_exceeded' | 'timeout' | 'rate_limit' | 'server_error' | 'invalid_request' | 'unknown';
@@ -26,6 +28,14 @@ export interface FallbackConfig {
     timeoutMs?: number;
     /** 重试次数（每个模型，默认 1） */
     retriesPerModel?: number;
+    /** 生成 token 预算（默认 15360，覆盖思考型模型预算不足导致的内容截断） */
+    maxTokens?: number;
+    /** 当天失败记忆文件路径：启用后当天失败过的模型当天不再使用（按 UTC 日期；跨进程/跨运行生效，如 .auto-write/bad-models.json） */
+    badModelFile?: string;
+    /** 内容最短长度门禁（默认 0 不启用；启用后短文视为失败切换下一模型） */
+    minLength?: number;
+    /** 完整收尾门禁（默认 false 不启用；启用后结尾须以句号类标点或 URL 收尾，否则视为截断切换下一模型） */
+    requireEnding?: boolean;
     /** 自定义模型列表（覆盖默认） */
     models?: AiModel[];
 }
@@ -58,6 +68,10 @@ export interface UnifiedAiConfig {
         maxDepth?: number;
         timeoutMs?: number;
         retriesPerModel?: number;
+        maxTokens?: number;
+        badModelFile?: string;
+        minLength?: number;
+        requireEnding?: boolean;
         models?: AiModel[];
     };
     /** OpenAI 兼容 API 配置（普通客户端） */
