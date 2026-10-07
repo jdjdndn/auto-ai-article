@@ -47,25 +47,7 @@ npm run build
 
 ### 方式三：本地 file: 引用（推荐，自动更新）
 
-所有子站项目统一使用 `file:` 协议引用本库，npm 创建 **symlink** 实时指向 `auto-ai-article/dist/`，库更新后各项目**无需重新安装**即自动生效。
-
-**引用方式**：
-
-```json
-// 子站项目 package.json（项目在 E:/code/<分类>/<站点>/ 下）
-{
-  "dependencies": {
-    "ai-article-pipeline": "file:../../auto-ai-article"
-  }
-}
-
-// article-site（项目在 E:/code/ 根目录下，路径差一级）
-{
-  "dependencies": {
-    "ai-article-pipeline": "file:../auto-ai-article"
-  }
-}
-```
+`npm run sync-vendor` 自动复制到`TARGETS`目录中
 
 **工作原理**：
 
@@ -92,7 +74,7 @@ cd auto-ai-article && npm run build
 **当前引用项目一览**：
 
 | 项目 | package.json 路径 |
-|------|------------------|
+| ------ | ------------------ |
 | 号卡/172, hm, yk, kd, hk, ksj, gc | `file:../../auto-ai-article` |
 | 信用卡/kahe, suishou, zhangshang | `file:../../auto-ai-article` |
 | 随身wifi/chaoneng, feilimao, gexing, liantong | `file:../../auto-ai-article` |
@@ -101,7 +83,7 @@ cd auto-ai-article && npm run build
 **为何不用 vendored 副本**：
 
 | | file: symlink（推荐） | vendored 副本 |
-|---|---|---|
+| --- | --- | --- |
 | 库更新后 | 自动生效 | 需手动 re-copy dist |
 | 版本一致性 | 始终同步 | 易漂移 |
 | 磁盘占用 | 无额外副本 | 每项目一份 |
@@ -227,7 +209,7 @@ export type { ArticleRow as Article, SeedRow as Seed, RunLogRow as RunLog }
 **导出的表**：
 
 | 表名 | 用途 | 主键 |
-|------|------|------|
+| ------ | ------ | ------ |
 | `articles` | 文章表 | `id` (text) |
 | `seeds` | 素材池 | `id` (integer, 自增) |
 | `runLogs` | 运行日志 | `id` (integer, 自增) |
@@ -235,7 +217,7 @@ export type { ArticleRow as Article, SeedRow as Seed, RunLogRow as RunLog }
 **articles 表字段**：
 
 | 字段 | 类型 | 说明 |
-|------|------|------|
+| ------ | ------ | ------ |
 | id | text | 主键，格式 `a-YYYYMMDD-XXXXXXXX` |
 | title | text | 标题（必填） |
 | summary | text | 摘要 |
@@ -257,7 +239,7 @@ export type { ArticleRow as Article, SeedRow as Seed, RunLogRow as RunLog }
 **seeds 表字段**：
 
 | 字段 | 类型 | 说明 |
-|------|------|------|
+| ------ | ------ | ------ |
 | id | integer | 主键，自增 |
 | raw | text | 原始素材内容（必填） |
 | category | text | 分类（默认"优惠"） |
@@ -275,7 +257,7 @@ export type { ArticleRow as Article, SeedRow as Seed, RunLogRow as RunLog }
 **runLogs 表字段**：
 
 | 字段 | 类型 | 说明 |
-|------|------|------|
+| ------ | ------ | ------ |
 | id | integer | 主键，自增 |
 | runAt | text | 运行时间 |
 | model | text | 使用的模型 |
@@ -529,7 +511,7 @@ console.log(dateContext())
 AI 生成的文章内容由多种块类型组成：
 
 | 类型 | 说明 | 字段 |
-|------|------|------|
+| ------ | ------ | ------ |
 | `text` | 段落文本 | `text` |
 | `h2` | 小标题 | `text` |
 | `list` | 要点列表 | `items: string[]` |

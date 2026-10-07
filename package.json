@@ -18,7 +18,8 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "sync-vendor": "npm run build && node sync-vendor.cjs"
   },
   "keywords": [
     "ai",
