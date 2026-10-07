@@ -298,3 +298,103 @@ export function normalizeContentBlocks(raw: unknown): ContentBlock[] {
   }
   return out
 }
+
+// ============================================================
+// 前端渲染：blocks → HTML 字符串（Nuxt v-html 调用）
+// ============================================================
+
+/** HTML 转义，防 XSS */
+export function escapeHtml(v: unknown): string {
+  if (v == null) return ''
+  return String(v)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+/** 从 blocks 提取 h2 生成 TOC 目录（≥3 个 h2 才输出），用 <details> 小屏折叠 */
+export function generateToc(blocks: ContentBlock[]): string {
+  if (!Array.isArray(blocks)) return ''
+  const headings = blocks
+    .filter((b: any) => b?.type === 'h2' && typeof b.text === 'string' && b.text.trim())
+    .map((b: any, i: number) => ({ text: b.text.trim(), id: `h2-${i}` }))
+  if (headings.length < 3) return ''
+  return `<details class="article-toc"><summary class="toc-title">本文目录</summary><ul>` +
+    headings.map((h) => `<li><a href="#${h.id}">${escapeHtml(h.text)}</a></li>`).join('') +
+    `</ul></details>`
+}
+
+/** 估算阅读时长（中文 300 字/分钟），返回分钟数 */
+export function readingTime(blocks: ContentBlock[]): number {
+  if (!Array.isArray(blocks)) return 0
+  let chars = 0
+  for (const b of blocks) {
+    if (typeof (b as any)?.text === 'string') chars += (b as any).text.length
+    if (Array.isArray((b as any)?.items)) {
+      (b as any).items.forEach((i: any) => { if (typeof i === 'string') chars += i.length })
+    }
+  }
+  return Math.max(1, Math.round(chars / 300))
+}
+
+/** 渲染单个 block 为 HTML 字符串 */
+export function renderBlock(block: ContentBlock, h2Idx: { i: number }): string {
+  if (!block || typeof block !== 'object') return ''
+  switch (block.type) {
+    case 'h2': {
+      const id = `h2-${h2Idx.i++}`
+      return `<h2 id="${id}" class="block-h2">${escapeHtml(block.text)}</h2>`
+    }
+    case 'text':
+      return `<p class="text-block">${escapeHtml(block.text)}</p>`
+    case 'list':
+      return `<div class="block-list">${(block.items || [])
+        .map((item) => `<p class="list-item">${escapeHtml(item)}</p>`)
+        .join('')}</div>`
+    case 'price': {
+      const p = block as any
+      return `<div class="block-price"><span class="price">¥${escapeHtml(p.price ?? p.name)}</span>` +
+        (p.original ? `<span class="original">¥${escapeHtml(p.original)}</span>` : '') +
+        (p.spec ? `<span class="spec">${escapeHtml(p.spec)}</span>` : '') +
+        `</div>`
+    }
+    case 'quote':
+      return `<div class="block-quote ${block.tone === 'warn' ? 'warn' : 'info'}">${escapeHtml(block.text)}</div>`
+    case 'image':
+      return `<figure class="block-image"><img src="${escapeHtml(block.url)}" alt="${escapeHtml(block.alt || '')}" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'" />` +
+        `<figcaption>${block.caption ? escapeHtml(block.caption) + ' · ' : ''}图源：网络</figcaption></figure>`
+    case 'ad':
+      return `<div class="ad-block"><span class="ad-label">${escapeHtml(block.label || '推荐')}</span>` +
+        `<p>${escapeHtml(block.text)}</p>` +
+        (block.link ? `<a href="${escapeHtml(block.link)}" target="_blank" rel="noopener nofollow" class="ad-link">去看看 →</a>` : '') +
+        `</div>`
+    default:
+      return ''
+  }
+}
+
+/** 渲染整个 content blocks 数组为 HTML 字符串（自动加 TOC） */
+export function renderArticleBlocks(blocks: ContentBlock[]): string {
+  if (!Array.isArray(blocks)) return ''
+  const h2Idx = { i: 0 }
+  const body = blocks.map((b) => renderBlock(b, h2Idx)).join('')
+  const toc = generateToc(blocks)
+  return toc + body
+}
+
+/** 渲染底部 CTA 卡片 HTML */
+export function renderArticleCta(siteConfig: { name?: string; priceRange?: string; userUrl?: string; agentUrl?: string } | undefined): string {
+  const name = escapeHtml(siteConfig?.name || '')
+  const priceRange = escapeHtml(siteConfig?.priceRange || '')
+  const userUrl = escapeHtml(siteConfig?.userUrl || '#')
+  const agentUrl = escapeHtml(siteConfig?.agentUrl || '#')
+  return `<section class="article-cta card">` +
+    `<h2>想办一张高性价比流量卡？</h2>` +
+    `<p>${name}提供四大运营商号卡套餐，${priceRange}，在线办理快速激活。</p>` +
+    `<div class="cta-actions">` +
+    `<a href="${userUrl}" target="_blank" rel="noopener" class="btn-primary-cta">立即办理号卡</a>` +
+    `<a href="${agentUrl}" target="_blank" rel="noopener" class="btn-secondary-cta">成为代理赚佣金</a>` +
+    `</div></section>`
+}

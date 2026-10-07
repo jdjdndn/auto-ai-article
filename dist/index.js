@@ -3,7 +3,7 @@
 // ai-article-pipeline — 统一导出
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.extractResponse = exports.getQuotaExhaustedModels = exports.resetQuotaState = exports.FREE_TEXT_MODELS = exports.getRecommendedModels = exports.createAiClient = exports.createCloudflareAiClient = exports.createFallbackClient = exports.startScheduler = exports.ArticleScheduler = exports.execute = exports.createPipeline = exports.replaceViolatingWords = exports.checkArticleSafety = exports.scanText = exports.normalizeContentBlocks = exports.asAnyArray = exports.firstNonEmpty = exports.firstImageOf = exports.normalizeJson = exports.safeJson = exports.extractJson = exports.runLogs = exports.seeds = exports.articles = exports.aiSuggestPrompt = exports.aiSystemPrompt = exports.dateContext = void 0;
+exports.extractResponse = exports.getQuotaExhaustedModels = exports.resetQuotaState = exports.FREE_TEXT_MODELS = exports.getRecommendedModels = exports.createAiClient = exports.createCloudflareAiClient = exports.createFallbackClient = exports.startScheduler = exports.ArticleScheduler = exports.execute = exports.createPipeline = exports.replaceViolatingWords = exports.checkArticleSafety = exports.scanText = exports.normalizeText = exports.textSimilarity = exports.extractArticleText = exports.fetchRssFeed = exports.readingTime = exports.generateToc = exports.renderArticleCta = exports.renderArticleBlocks = exports.renderBlock = exports.escapeHtml = exports.normalizeContentBlocks = exports.asAnyArray = exports.firstNonEmpty = exports.firstImageOf = exports.normalizeJson = exports.safeJson = exports.extractJson = exports.runLogs = exports.seeds = exports.articles = exports.aiSuggestPrompt = exports.aiSystemPrompt = exports.dateContext = void 0;
 // 提示词
 var prompts_js_1 = require("./prompts.js");
 Object.defineProperty(exports, "dateContext", { enumerable: true, get: function () { return prompts_js_1.dateContext; } });
@@ -23,6 +23,18 @@ Object.defineProperty(exports, "firstImageOf", { enumerable: true, get: function
 Object.defineProperty(exports, "firstNonEmpty", { enumerable: true, get: function () { return utils_js_1.firstNonEmpty; } });
 Object.defineProperty(exports, "asAnyArray", { enumerable: true, get: function () { return utils_js_1.asAnyArray; } });
 Object.defineProperty(exports, "normalizeContentBlocks", { enumerable: true, get: function () { return utils_js_1.normalizeContentBlocks; } });
+Object.defineProperty(exports, "escapeHtml", { enumerable: true, get: function () { return utils_js_1.escapeHtml; } });
+Object.defineProperty(exports, "renderBlock", { enumerable: true, get: function () { return utils_js_1.renderBlock; } });
+Object.defineProperty(exports, "renderArticleBlocks", { enumerable: true, get: function () { return utils_js_1.renderArticleBlocks; } });
+Object.defineProperty(exports, "renderArticleCta", { enumerable: true, get: function () { return utils_js_1.renderArticleCta; } });
+Object.defineProperty(exports, "generateToc", { enumerable: true, get: function () { return utils_js_1.generateToc; } });
+Object.defineProperty(exports, "readingTime", { enumerable: true, get: function () { return utils_js_1.readingTime; } });
+// 素材采集
+var sources_js_1 = require("./sources.js");
+Object.defineProperty(exports, "fetchRssFeed", { enumerable: true, get: function () { return sources_js_1.fetchRssFeed; } });
+Object.defineProperty(exports, "extractArticleText", { enumerable: true, get: function () { return sources_js_1.extractArticleText; } });
+Object.defineProperty(exports, "textSimilarity", { enumerable: true, get: function () { return sources_js_1.textSimilarity; } });
+Object.defineProperty(exports, "normalizeText", { enumerable: true, get: function () { return sources_js_1.normalizeText; } });
 // 内容安全
 var content_safety_js_1 = require("./content-safety.js");
 Object.defineProperty(exports, "scanText", { enumerable: true, get: function () { return content_safety_js_1.scanText; } });
