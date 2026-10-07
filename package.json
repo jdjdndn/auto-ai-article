@@ -6,9 +6,12 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "require": "./dist/client.js"
     }
   },
   "files": [
@@ -34,7 +37,7 @@
     "cloudflare-workers": "^0.0.14",
     "typescript": "^5.5.0"
   },
-  "dependencies": {
+  "peerDependencies": {
     "drizzle-orm": "^0.45.3"
   }
 }

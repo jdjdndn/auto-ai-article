@@ -43,6 +43,10 @@ const VENDOR_PKG = {
   type: 'commonjs',
   main: './dist/index.js',
   types: './dist/index.d.ts',
+  exports: {
+    '.': { types: './dist/index.d.ts', require: './dist/index.js' },
+    './client': { types: './dist/client.d.ts', require: './dist/client.js' },
+  },
 }
 
 if (!fs.existsSync(SRC)) {

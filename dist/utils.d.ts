@@ -1,4 +1,4 @@
-import type { ContentBlock } from './types.js';
+import type { ContentBlock, CtaConfig } from './types.js';
 /** 从候选字段中取第一个非空字符串（空串不能短路，否则会丢掉后面的真实内容） */
 export declare function firstNonEmpty(...vals: unknown[]): string;
 export declare function extractJson(text: string): unknown;
@@ -20,16 +20,7 @@ export declare function escapeHtml(v: unknown): string;
 export declare function generateToc(blocks: ContentBlock[]): string;
 /** 估算阅读时长（中文 300 字/分钟），返回分钟数 */
 export declare function readingTime(blocks: ContentBlock[]): number;
-/** 渲染单个 block 为 HTML 字符串 */
-export declare function renderBlock(block: ContentBlock, h2Idx: {
-    i: number;
-}): string;
 /** 渲染整个 content blocks 数组为 HTML 字符串（自动加 TOC） */
 export declare function renderArticleBlocks(blocks: ContentBlock[]): string;
-/** 渲染底部 CTA 卡片 HTML */
-export declare function renderArticleCta(siteConfig: {
-    name?: string;
-    priceRange?: string;
-    userUrl?: string;
-    agentUrl?: string;
-} | undefined): string;
+/** 渲染底部 CTA 卡片 HTML（文案全可配置） */
+export declare function renderArticleCta(config: CtaConfig | undefined): string;

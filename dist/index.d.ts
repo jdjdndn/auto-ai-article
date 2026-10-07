@@ -1,8 +1,8 @@
-export type { Seed, SeedInput, GeneratedArticle, ContentBlock, FaqItem, LinkItem, InsertResult, InsertResultItem, SafetyHit, SafetyResult, SafetyRule, AiMessage, AiClient, AiConfig, PipelineConfig, PipelineRunResult, TopicSuggestion, RunLogInput, } from './types.js';
+export type { Seed, SeedInput, GeneratedArticle, ContentBlock, FaqItem, LinkItem, InsertResult, InsertResultItem, SafetyHit, SafetyResult, SafetyRule, AiMessage, AiClient, AiConfig, PipelineConfig, PipelineRunResult, TopicSuggestion, RunLogInput, CtaConfig, } from './types.js';
 export { dateContext, aiSystemPrompt, aiSuggestPrompt } from './prompts.js';
 export { articles, seeds, runLogs } from './schema.js';
 export type { ArticleRow, SeedRow, RunLogRow } from './schema.js';
-export { extractJson, safeJson, normalizeJson, firstImageOf, firstNonEmpty, asAnyArray, normalizeContentBlocks, escapeHtml, renderBlock, renderArticleBlocks, renderArticleCta, generateToc, readingTime, articleCss } from './utils.js';
+export { extractJson, safeJson, normalizeJson, firstImageOf, firstNonEmpty, asAnyArray, normalizeContentBlocks, escapeHtml, renderArticleBlocks, renderArticleCta, generateToc, readingTime, articleCss } from './utils.js';
 export { fetchRssFeed, extractArticleText, textSimilarity, normalizeText } from './sources.js';
 export type { RssItem } from './sources.js';
 export { scanText, checkArticleSafety, replaceViolatingWords } from './content-safety.js';

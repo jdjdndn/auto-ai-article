@@ -55,7 +55,11 @@ export type ContentBlock = {
     link?: string;
 } | {
     type: 'price';
-    [key: string]: unknown;
+    price: string;
+    original?: string;
+    spec?: string;
+    name?: string;
+    desc?: string;
 } | {
     type: 'image';
     url: string;
@@ -66,6 +70,21 @@ export type ContentBlock = {
     url: string;
     title?: string;
 };
+/** CTA 卡片配置（renderArticleCta 用） */
+export interface CtaConfig {
+    /** 主标题，默认"想办一张高性价比套餐？" */
+    title?: string;
+    /** 描述文字 */
+    description?: string;
+    /** 主按钮文案，默认"立即办理" */
+    primaryLabel?: string;
+    /** 主按钮链接 */
+    primaryUrl?: string;
+    /** 副按钮文案（留空则不显示） */
+    secondaryLabel?: string;
+    /** 副按钮链接 */
+    secondaryUrl?: string;
+}
 export interface FaqItem {
     q: string;
     a: string;

@@ -14,7 +14,6 @@ exports.normalizeContentBlocks = normalizeContentBlocks;
 exports.escapeHtml = escapeHtml;
 exports.generateToc = generateToc;
 exports.readingTime = readingTime;
-exports.renderBlock = renderBlock;
 exports.renderArticleBlocks = renderArticleBlocks;
 exports.renderArticleCta = renderArticleCta;
 // —— JSON 提取（容忍 markdown 代码块包裹 / 前后多余文字）——
@@ -468,7 +467,7 @@ function readingTime(blocks) {
     }
     return Math.max(1, Math.round(chars / 300));
 }
-/** 渲染单个 block 为 HTML 字符串 */
+/** 渲染单个 block 为 HTML 字符串（内部，不导出） */
 function renderBlock(block, h2Idx) {
     if (!block || typeof block !== 'object')
         return '';
@@ -483,13 +482,11 @@ function renderBlock(block, h2Idx) {
             return `<div class="block-list">${(block.items || [])
                 .map((item) => `<p class="list-item">${escapeHtml(item)}</p>`)
                 .join('')}</div>`;
-        case 'price': {
-            const p = block;
-            return `<div class="block-price"><span class="price">¥${escapeHtml(p.price ?? p.name)}</span>` +
-                (p.original ? `<span class="original">¥${escapeHtml(p.original)}</span>` : '') +
-                (p.spec ? `<span class="spec">${escapeHtml(p.spec)}</span>` : '') +
+        case 'price':
+            return `<div class="block-price"><span class="price">¥${escapeHtml(block.price)}</span>` +
+                (block.original ? `<span class="original">¥${escapeHtml(block.original)}</span>` : '') +
+                (block.spec ? `<span class="spec">${escapeHtml(block.spec)}</span>` : '') +
                 `</div>`;
-        }
         case 'quote':
             return `<div class="block-quote ${block.tone === 'warn' ? 'warn' : 'info'}">${escapeHtml(block.text)}</div>`;
         case 'image':
@@ -513,17 +510,20 @@ function renderArticleBlocks(blocks) {
     const toc = generateToc(blocks);
     return toc + body;
 }
-/** 渲染底部 CTA 卡片 HTML */
-function renderArticleCta(siteConfig) {
-    const name = escapeHtml(siteConfig?.name || '');
-    const priceRange = escapeHtml(siteConfig?.priceRange || '');
-    const userUrl = escapeHtml(siteConfig?.userUrl || '#');
-    const agentUrl = escapeHtml(siteConfig?.agentUrl || '#');
-    return `<section class="article-cta card">` +
-        `<h2>想办一张高性价比流量卡？</h2>` +
-        `<p>${name}提供四大运营商号卡套餐，${priceRange}，在线办理快速激活。</p>` +
-        `<div class="cta-actions">` +
-        `<a href="${userUrl}" target="_blank" rel="noopener" class="btn-primary-cta">立即办理号卡</a>` +
-        `<a href="${agentUrl}" target="_blank" rel="noopener" class="btn-secondary-cta">成为代理赚佣金</a>` +
-        `</div></section>`;
+/** 渲染底部 CTA 卡片 HTML（文案全可配置） */
+function renderArticleCta(config) {
+    const title = escapeHtml(config?.title || '想办一张高性价比套餐？');
+    const description = escapeHtml(config?.description || '');
+    const primaryLabel = escapeHtml(config?.primaryLabel || '立即办理');
+    const primaryUrl = escapeHtml(config?.primaryUrl || '#');
+    let html = `<section class="article-cta card"><h2>${title}</h2>`;
+    if (description)
+        html += `<p>${description}</p>`;
+    html += `<div class="cta-actions">`;
+    html += `<a href="${primaryUrl}" target="_blank" rel="noopener" class="btn-primary-cta">${primaryLabel}</a>`;
+    if (config?.secondaryLabel && config?.secondaryUrl) {
+        html += `<a href="${escapeHtml(config.secondaryUrl)}" target="_blank" rel="noopener" class="btn-secondary-cta">${escapeHtml(config.secondaryLabel)}</a>`;
+    }
+    html += `</div></section>`;
+    return html;
 }
