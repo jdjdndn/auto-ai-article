@@ -8,12 +8,13 @@ exports.execute = execute;
 const pipeline_js_1 = require("./pipeline.js");
 // —— 本地 AI 网关客户端（带慢启动重试）——
 function createLocalGatewayClient(config) {
+    const log = config.logger || ((...args) => console.log(new Date().toISOString(), '[executor]', ...args));
     return async (messages) => {
         const delays = [15_000, 30_000];
         let lastErr;
         for (let i = 0; i < 3; i++) {
             if (i > 0) {
-                console.log(new Date().toISOString(), '[executor]', `网关第 ${i + 1} 次重试（等 ${delays[i - 1] / 1000}s）`);
+                log(`网关第 ${i + 1} 次重试（等 ${delays[i - 1] / 1000}s）`);
                 await new Promise((r) => setTimeout(r, delays[i - 1]));
             }
             try {
@@ -34,7 +35,7 @@ function createLocalGatewayClient(config) {
             }
             catch (e) {
                 lastErr = e;
-                console.log(new Date().toISOString(), '[executor]', `网关第 ${i + 1} 次失败: ${e.message}`);
+                log(`网关第 ${i + 1} 次失败: ${e.message}`);
             }
         }
         throw lastErr || new Error('AI 网关调用失败');
@@ -102,7 +103,7 @@ async function execute(db, config = {}) {
         log(`使用本地网关 ${localGateway}，模型 ${localModel}`);
         pipelineConfig.ai = {
             ...pipelineConfig.ai,
-            client: createLocalGatewayClient({ gateway: localGateway, model: localModel }),
+            client: createLocalGatewayClient({ gateway: localGateway, model: localModel, logger: log }),
             model: localModel,
         };
     }
