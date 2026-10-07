@@ -147,6 +147,7 @@ export function createPipeline(db: PipelineDB, config: PipelineConfig = {}): Pip
   const sanitizeUrls = config.sanitizeUrls ?? true
   const safetyAction = config.safetyAction ?? 'replace'
   const suggestRetries = config.suggestRetries ?? 1
+  const concurrency = config.concurrency ?? 3
 
   // —— AI 选题（带重试）——
 
@@ -245,9 +246,19 @@ export function createPipeline(db: PipelineDB, config: PipelineConfig = {}): Pip
     const r2 = replaceViolatingWords(article.summary)
     article.summary = r2.text
     article.content = article.content.map((b) => {
+      // text block
       if ('text' in b && typeof b.text === 'string') {
         const r = replaceViolatingWords(b.text)
         return r.replaced ? { ...b, text: r.text } : b
+      }
+      // list items
+      if (b.type === 'list' && Array.isArray(b.items)) {
+        const newItems = b.items.map((it) => {
+          if (typeof it !== 'string') return it
+          const r = replaceViolatingWords(it)
+          return r.replaced ? r.text : it
+        })
+        return { ...b, items: newItems }
       }
       return b
     })
@@ -301,7 +312,7 @@ export function createPipeline(db: PipelineDB, config: PipelineConfig = {}): Pip
     const targets = list.slice(0, target)
     result.total = targets.length
 
-    const outcomes = await mapWithConcurrency(targets, 3, async (s) => {
+    const outcomes = await mapWithConcurrency(targets, concurrency, async (s) => {
       const raw = String(s.raw || '')
       if (raw.length < 8) {
         await db.markSeedFailed(s.id, '素材过短').catch(() => {})

@@ -168,6 +168,8 @@ export interface PipelineConfig {
     safetyAction?: 'draft' | 'replace';
     /** AI 选题失败重试次数（默认 1，即最多尝试 2 次） */
     suggestRetries?: number;
+    /** 并发生成篇数（默认 3） */
+    concurrency?: number;
 }
 export interface PipelineRunResult {
     ok: number;

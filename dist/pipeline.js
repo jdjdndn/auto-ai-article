@@ -113,6 +113,7 @@ function createPipeline(db, config = {}) {
     const sanitizeUrls = config.sanitizeUrls ?? true;
     const safetyAction = config.safetyAction ?? 'replace';
     const suggestRetries = config.suggestRetries ?? 1;
+    const concurrency = config.concurrency ?? 3;
     // —— AI 选题（带重试）——
     async function suggestTopics() {
         return withRetry(async () => {
@@ -198,9 +199,20 @@ function createPipeline(db, config = {}) {
         const r2 = (0, content_safety_js_1.replaceViolatingWords)(article.summary);
         article.summary = r2.text;
         article.content = article.content.map((b) => {
+            // text block
             if ('text' in b && typeof b.text === 'string') {
                 const r = (0, content_safety_js_1.replaceViolatingWords)(b.text);
                 return r.replaced ? { ...b, text: r.text } : b;
+            }
+            // list items
+            if (b.type === 'list' && Array.isArray(b.items)) {
+                const newItems = b.items.map((it) => {
+                    if (typeof it !== 'string')
+                        return it;
+                    const r = (0, content_safety_js_1.replaceViolatingWords)(it);
+                    return r.replaced ? r.text : it;
+                });
+                return { ...b, items: newItems };
             }
             return b;
         });
@@ -243,7 +255,7 @@ function createPipeline(db, config = {}) {
         // 4. 生成 + 安全处理
         const targets = list.slice(0, target);
         result.total = targets.length;
-        const outcomes = await mapWithConcurrency(targets, 3, async (s) => {
+        const outcomes = await mapWithConcurrency(targets, concurrency, async (s) => {
             const raw = String(s.raw || '');
             if (raw.length < 8) {
                 await db.markSeedFailed(s.id, '素材过短').catch(() => { });
