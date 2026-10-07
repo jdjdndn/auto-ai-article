@@ -16,6 +16,7 @@ export {
   renderFaqSection,
   renderShareBar,
   articleJsonLd,
+  initArticleActions,
 } from './utils.js'
 
 export type { ContentBlock, CtaConfig, LinkItem, FaqItem } from './types.js'

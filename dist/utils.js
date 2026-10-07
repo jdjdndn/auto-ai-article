@@ -20,6 +20,7 @@ exports.renderArticleLinks = renderArticleLinks;
 exports.renderFaqSection = renderFaqSection;
 exports.renderShareBar = renderShareBar;
 exports.articleJsonLd = articleJsonLd;
+exports.initArticleActions = initArticleActions;
 // —— JSON 提取（容忍 markdown 代码块包裹 / 前后多余文字）——
 /** 从候选字段中取第一个非空字符串（空串不能短路，否则会丢掉后面的真实内容） */
 function firstNonEmpty(...vals) {
@@ -551,21 +552,26 @@ function renderArticleCta(config) {
     html += `</div></section>`;
     return html;
 }
-/** 渲染推广链接区（主按钮常显 + 更多折叠） */
+/** 渲染推广链接区（主按钮常显 + 更多折叠，opts 可覆盖全部文案/样式） */
 function renderArticleLinks(links, opts = {}) {
     if (!Array.isArray(links) || !links.length)
         return '';
     const main = links.filter((l) => l.kind !== 'more');
     const more = links.filter((l) => l.kind === 'more');
     const note = opts.note || '以下链接为第三方推广，请按需理性消费';
-    let html = `<div class="article-links"><span class="ad-note"><b class="ad-badge">广告</b>${escapeHtml(note)}</span>`;
+    const btnClass = opts.primaryClass || 'link-btn';
+    const moreText = opts.moreText || '展开更多';
+    const adLabel = opts.adLabel || '广告';
+    let html = `<div class="article-links">`;
+    if (!opts.hideNote)
+        html += `<span class="ad-note"><b class="ad-badge">${escapeHtml(adLabel)}</b>${escapeHtml(note)}</span>`;
     for (const l of main) {
         if (!l.url || /example\.com|test\.com/.test(l.url))
             continue;
-        html += `<a href="${escapeHtml(l.url)}" target="_blank" rel="noopener nofollow sponsored noreferrer" class="link-btn" data-track-click="${escapeHtml(l.id ? String(l.id) : '')}">${escapeHtml(l.label || '立即办理')}</a>`;
+        html += `<a href="${escapeHtml(l.url)}" target="_blank" rel="noopener nofollow sponsored noreferrer" class="${btnClass}" data-track-click="${escapeHtml(l.id ? String(l.id) : '')}">${escapeHtml(l.label || '立即办理')}</a>`;
     }
     if (more.length) {
-        html += `<div class="more-wrap"><button class="more-toggle" data-action="toggle-more">${more.length} 个更多</button><div class="more-list" hidden>`;
+        html += `<div class="more-wrap"><button class="more-toggle" data-action="toggle-more">${escapeHtml(moreText)}（${more.length}）</button><div class="more-list" hidden>`;
         for (const l of more) {
             if (!l.url || /example\.com|test\.com/.test(l.url))
                 continue;
@@ -576,15 +582,22 @@ function renderArticleLinks(links, opts = {}) {
     html += `</div>`;
     return html;
 }
-/** 渲染 FAQ 折叠面板 */
-function renderFaqSection(faq) {
+/** 渲染 FAQ 面板（opts.mode='collapse' 折叠默认 / 'expand' 全展开） */
+function renderFaqSection(faq, opts = {}) {
     if (!Array.isArray(faq) || !faq.length)
         return '';
-    let html = `<section class="article-faq"><h2>常见问题</h2>`;
+    const title = opts.title || '常见问题';
+    const mode = opts.mode || 'collapse';
+    let html = `<section class="article-faq"><h2>${escapeHtml(title)}</h2>`;
     for (const f of faq) {
         if (!f?.q || !f?.a)
             continue;
-        html += `<details><summary>${escapeHtml(f.q)}</summary><p>${escapeHtml(f.a)}</p></details>`;
+        if (mode === 'expand') {
+            html += `<div class="faq-item"><h3>${escapeHtml(f.q)}</h3><p>${escapeHtml(f.a)}</p></div>`;
+        }
+        else {
+            html += `<details><summary>${escapeHtml(f.q)}</summary><p>${escapeHtml(f.a)}</p></details>`;
+        }
     }
     html += `</section>`;
     return html;
@@ -632,4 +645,56 @@ function articleJsonLd(article, site) {
         });
     }
     return JSON.stringify(ld);
+}
+/**
+ * 客户端事件委托绑定（仅浏览器环境调用）
+ * 绑定：更多折叠 / 复制链接 / 纠错按钮
+ * opts: { reportUrl?: string, onTrackClick?: (linkId) => void }
+ */
+function initArticleActions(root = document, opts = {}) {
+    if (typeof document === 'undefined')
+        return;
+    // 更多折叠
+    root.addEventListener('click', (e) => {
+        const t = e.target;
+        if (t.matches?.('[data-action="toggle-more"]')) {
+            const list = t.parentElement?.querySelector('.more-list');
+            if (list)
+                list.toggleAttribute('hidden');
+            t.textContent = list?.hasAttribute('hidden')
+                ? `${t.textContent?.replace(/（.*?）/, '').trim()}`
+                : '收起';
+        }
+    });
+    // 复制链接
+    root.addEventListener('click', async (e) => {
+        const t = e.target;
+        if (t.matches?.('[data-action="copy-link"]')) {
+            const url = t.getAttribute('data-url') || location.href;
+            const title = t.getAttribute('data-title') || document.title;
+            const text = `${title}\n${url}`;
+            try {
+                await navigator.clipboard.writeText(text);
+                t.textContent = '已复制';
+                setTimeout(() => (t.textContent = '复制链接'), 2000);
+            }
+            catch { /* 忽略 */ }
+        }
+    });
+    // 纠错
+    root.addEventListener('click', (e) => {
+        const t = e.target;
+        if (t.matches?.('[data-action="report"]')) {
+            const url = opts.reportUrl || '/report';
+            window.open(url, '_blank', 'noopener');
+        }
+    });
+    // 点击追踪
+    if (opts.onTrackClick) {
+        root.addEventListener('click', (e) => {
+            const t = e.target.closest?.('[data-track-click]');
+            if (t)
+                opts.onTrackClick(t.getAttribute('data-track-click') || '');
+        });
+    }
 }

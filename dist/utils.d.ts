@@ -31,17 +31,24 @@ export interface LinkItem {
     url: string;
     kind?: string;
 }
-/** 渲染推广链接区（主按钮常显 + 更多折叠） */
+/** 渲染推广链接区（主按钮常显 + 更多折叠，opts 可覆盖全部文案/样式） */
 export declare function renderArticleLinks(links: unknown, opts?: {
     note?: string;
+    hideNote?: boolean;
+    primaryClass?: string;
+    moreText?: string;
+    adLabel?: string;
 }): string;
 /** FAQ 项 */
 export interface FaqItem {
     q: string;
     a: string;
 }
-/** 渲染 FAQ 折叠面板 */
-export declare function renderFaqSection(faq: unknown): string;
+/** 渲染 FAQ 面板（opts.mode='collapse' 折叠默认 / 'expand' 全展开） */
+export declare function renderFaqSection(faq: unknown, opts?: {
+    mode?: 'collapse' | 'expand';
+    title?: string;
+}): string;
 /** 分享/收藏/纠错按钮栏 */
 export declare function renderShareBar(article: {
     id: string;
@@ -69,3 +76,12 @@ export declare function articleJsonLd(article: {
     url: string;
     logo?: string;
 }): string;
+/**
+ * 客户端事件委托绑定（仅浏览器环境调用）
+ * 绑定：更多折叠 / 复制链接 / 纠错按钮
+ * opts: { reportUrl?: string, onTrackClick?: (linkId) => void }
+ */
+export declare function initArticleActions(root?: ParentNode, opts?: {
+    reportUrl?: string;
+    onTrackClick?: (linkId: string) => void;
+}): void;
