@@ -56,15 +56,17 @@ function extractJson(text) {
         catch { /* fallthrough */ }
     }
     // 尝试提取数组（兼容全角括号）
+    // 注意：只在最外层没有半角 [] 时才尝试全角，避免破坏 JSON 字符串里的全角括号
     let arrStart = t.indexOf('[');
     let arrEnd = t.lastIndexOf(']');
     if (!(arrStart >= 0 && arrEnd > arrStart)) {
+        // 找全角括号，且它们必须包裹整个 JSON 内容（前后无其他字符）
         const fwStart = t.indexOf('［');
         const fwEnd = t.lastIndexOf('］');
-        if (fwStart >= 0 && fwEnd > fwStart) {
-            t = t.slice(0, fwStart) + '[' + t.slice(fwStart + 1, fwEnd) + ']' + t.slice(fwEnd + 1);
-            arrStart = t.indexOf('[');
-            arrEnd = t.lastIndexOf(']');
+        if (fwStart === 0 && fwEnd > 0 && fwEnd === t.length - 1) {
+            t = '[' + t.slice(1, -1) + ']';
+            arrStart = 0;
+            arrEnd = t.length - 1;
         }
     }
     if (arrStart >= 0 && arrEnd > arrStart) {
@@ -346,7 +348,7 @@ function normalizeContentBlocks(raw) {
 // ============================================================
 // 前端渲染：blocks → HTML 字符串（Nuxt v-html 调用）
 // ============================================================
-/** 文章页配套 CSS（TOC/block 排版），各项目用 useHead({ style }) 注入 */
+/** 文章页配套 CSS（仅 TOC，block 样式由各站 scoped style 管理，避免冲突） */
 exports.articleCss = `
 .article-toc {
   background: var(--primary-weak, #eff6ff);
@@ -380,53 +382,6 @@ exports.articleCss = `
   }
   .article-toc[open] .toc-title::after { transform: rotate(90deg); }
 }
-.text-block, .list-item {
-  line-height: 1.8;
-  margin: 0 0 1em;
-  color: var(--text);
-}
-.block-list { margin: 0 0 1em; }
-.block-price {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 12px 16px;
-  background: #f8fafc;
-  border-radius: 8px;
-  margin: 0 0 1em;
-}
-.block-price .price { font-size: 20px; font-weight: 700; color: #dc2626; }
-.block-price .original { font-size: 14px; color: #94a3b8; text-decoration: line-through; }
-.block-price .spec { font-size: 13px; color: #64748b; }
-.block-quote {
-  padding: 12px 16px;
-  border-left: 3px solid var(--primary, #2563eb);
-  background: var(--primary-weak, #eff6ff);
-  border-radius: 0 8px 8px 0;
-  margin: 0 0 1em;
-  font-style: italic;
-}
-.block-quote.warn { border-left-color: #f59e0b; background: #fffbeb; }
-.block-image { margin: 0 0 1em; }
-.block-image img { max-width: 100%; border-radius: 8px; }
-.block-image figcaption { font-size: 12px; color: #94a3b8; text-align: center; margin-top: 6px; }
-.ad-block {
-  padding: 14px 16px;
-  background: linear-gradient(135deg, #eff6ff, #dbeafe);
-  border-radius: 10px;
-  margin: 1.5em 0;
-}
-.ad-block .ad-label {
-  display: inline-block;
-  font-size: 12px;
-  color: var(--primary, #2563eb);
-  background: #fff;
-  padding: 2px 8px;
-  border-radius: 4px;
-  margin-bottom: 6px;
-}
-.ad-block p { margin: 0 0 8px; }
-.ad-block .ad-link { color: var(--primary, #2563eb); font-weight: 500; }
 `;
 /** HTML 转义，防 XSS */
 function escapeHtml(v) {
