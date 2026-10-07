@@ -348,8 +348,9 @@ function normalizeContentBlocks(raw) {
 // ============================================================
 // 前端渲染：blocks → HTML 字符串（Nuxt v-html 调用）
 // ============================================================
-/** 文章页配套 CSS（仅 TOC，block 样式由各站 scoped style 管理，避免冲突） */
+/** 文章页配套 CSS（TOC + block 排版，v-html 渲染用，各站用 useHead 注入） */
 exports.articleCss = `
+/* TOC 目录 */
 .article-toc {
   background: var(--primary-weak, #eff6ff);
   border: 1px solid #dbeafe;
@@ -367,21 +368,46 @@ exports.articleCss = `
 .article-toc .toc-title::-webkit-details-marker { display: none; }
 .article-toc ul { list-style: none; padding: 0; margin: 8px 0 0; }
 .article-toc li { padding: 3px 0; }
-.article-toc a {
-  color: var(--primary);
-  text-decoration: none;
-  line-height: 1.5;
-}
+.article-toc a { color: var(--primary); text-decoration: none; line-height: 1.5; }
 .article-toc a:hover { text-decoration: underline; }
 .block-h2 { scroll-margin-top: 80px; }
 @media (max-width: 767px) {
-  .article-toc .toc-title::after {
-    content: '\\25B8';
-    float: right;
-    transition: transform .2s;
-  }
+  .article-toc .toc-title::after { content: '\\25B8'; float: right; transition: transform .2s; }
   .article-toc[open] .toc-title::after { transform: rotate(90deg); }
 }
+
+/* block 排版 */
+.text-block { margin-bottom: 14px; line-height: 1.85; color: var(--text); font-size: 15px; }
+.block-h2 { font-size: 18px; margin: 26px 0 12px; padding: 4px 0 8px 12px; border-left: 4px solid var(--primary, #2563eb); color: var(--text); }
+.block-list { margin: 12px 0; }
+.list-item { padding: 6px 0 6px 20px; position: relative; color: var(--text); font-size: 14px; margin: 0; }
+.list-item::before { content: '•'; position: absolute; left: 4px; color: var(--primary, #2563eb); font-weight: 700; }
+.block-price { display: flex; align-items: baseline; gap: 12px; background: linear-gradient(135deg, #fff7e6, #fffbe8); border: 1px solid #fde68a; border-radius: 12px; padding: 14px 18px; margin: 16px 0; }
+.block-price .price { font-size: 28px; font-weight: 700; color: #dc2626; }
+.block-price .original { color: #b6bcc6; text-decoration: line-through; font-size: 14px; }
+.block-price .spec { color: var(--text-muted, #64748b); font-size: 13px; }
+.block-quote { border-radius: 10px; padding: 12px 16px; margin: 16px 0; font-size: 14px; line-height: 1.75; }
+.block-quote.warn { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
+.block-quote.info { background: var(--primary-weak, #eff6ff); border: 1px solid #bfdbfe; color: #1d4ed8; }
+.block-image { margin: 16px 0; }
+.block-image img { width: 100%; border-radius: 12px; display: block; }
+.block-image figcaption { font-size: 12px; color: var(--text-muted, #94a3b8); margin-top: 6px; text-align: center; }
+
+/* ad block */
+.ad-block { background: #fffbeb; border: 1px dashed #fcd34d; border-radius: 10px; padding: 12px 16px; margin: 12px 0; font-size: 14px; }
+.ad-block .ad-label { display: inline-block; background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; font-size: 11px; padding: 1px 10px; border-radius: 999px; margin-bottom: 6px; }
+.ad-block p { margin: 0 0 6px; }
+.ad-block .ad-link { display: inline-block; margin-top: 6px; font-weight: 600; color: var(--primary, #2563eb); text-decoration: none; }
+
+/* CTA 卡片 */
+.article-cta { margin-bottom: 22px; padding: 28px 24px; text-align: center; background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border: 1px solid #bae6fd; border-radius: 10px; }
+.article-cta h2 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
+.article-cta p { color: var(--text-muted, #64748b); font-size: 14px; margin-bottom: 18px; }
+.article-cta .cta-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.btn-primary-cta { display: inline-block; padding: 12px 28px; background: linear-gradient(180deg, var(--primary, #2563eb), var(--primary-strong, #1d4ed8)); color: #fff; border-radius: 10px; text-decoration: none; font-size: 15px; font-weight: 600; transition: opacity .2s; }
+.btn-primary-cta:hover { opacity: .9; }
+.btn-secondary-cta { display: inline-block; padding: 12px 28px; background: #fff; color: var(--primary, #2563eb); border: 1px solid var(--primary, #2563eb); border-radius: 10px; text-decoration: none; font-size: 15px; font-weight: 600; transition: background .2s; }
+.btn-secondary-cta:hover { background: var(--primary-weak, #eff6ff); }
 `;
 /** HTML 转义，防 XSS */
 function escapeHtml(v) {
