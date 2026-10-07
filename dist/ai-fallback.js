@@ -96,12 +96,12 @@ function classifyError(error) {
     if (error.name === 'TimeoutError' || error.name === 'AbortError')
         return 'timeout';
     const msg = error.message.toLowerCase();
-    if (msg.includes('quota') || msg.includes('limit') || msg.includes('exceeded'))
+    if (msg.includes('rate') || msg.includes('429'))
+        return 'rate_limit';
+    if (msg.includes('quota') || msg.includes('exceeded'))
         return 'quota_exceeded';
     if (msg.includes('timeout') || msg.includes('timed out'))
         return 'timeout';
-    if (msg.includes('rate') || msg.includes('429'))
-        return 'rate_limit';
     if (msg.includes('500') || msg.includes('502') || msg.includes('503') || msg.includes('server'))
         return 'server_error';
     if (msg.includes('400') || msg.includes('invalid') || msg.includes('bad request'))
@@ -165,12 +165,7 @@ function resetQuotaState() {
 function getQuotaExhaustedModels() {
     return Array.from(quotaExhausted);
 }
-// —— 按天失败记忆（与 generate-posts.js 的 bad-providers.json 同机制）——
-// 当天某个模型失败过，今天之内所有运行都不再使用（避免反复尝试浪费 token）；
-// 文件格式：{ date: 'YYYY-MM-DD', models: [...] }；日期按 UTC（与 CF 每模型每日额度重置周期一致）
-function todayUtc() {
-    return new Date().toISOString().slice(0, 10);
-}
+// —— 按天失败记忆（BadModelStore 实现负责持久化）——
 function loadBadModels(store) {
     if (!store)
         return new Set();
