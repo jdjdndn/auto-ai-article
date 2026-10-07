@@ -4,6 +4,8 @@
 // ============================================================
 
 import type { AiClient, AiMessage } from './types.js'
+import { FREE_TEXT_MODELS, OPENROUTER_FREE_MODELS } from './ai-config.js'
+import type { AiModel } from './ai-config.js'
 
 /** 失败模型持久化存储接口（Workers 环境用 KV/D1，Node 环境用 fs） */
 export interface BadModelStore {
@@ -11,47 +13,9 @@ export interface BadModelStore {
   save(models: string[]): void
 }
 
-// —— 模型定义 ——
-
-export interface AiModel {
-  /** 模型 ID（Cloudflare Workers AI） */
-  id: string
-  /** 供应商 */
-  provider: string
-  /** 优先级（数字越小越优先） */
-  priority: number
-  /** 说明 */
-  description: string
-  /** 是否适合中文长文 */
-  chineseOptimized: boolean
-  /** 是否关闭思考模式（chat_template_kwargs.thinking=false；仅支持该参数的模型标记） */
-  noThinking?: boolean
-}
-
-// —— 免费模型清单（按优先级排序）——
-// 来源：Cloudflare Workers AI 官方文档（2026-10）
-// 免费额度：每个模型每日 10,000 neurons
-
-export const FREE_TEXT_MODELS: AiModel[] = [
-  // —— 中文优化模型（优先）——
-  { id: '@cf/qwen/qwen3.8-27b', provider: 'Alibaba/Qwen', priority: 1, description: 'Qwen 3.8，中文能力最强', chineseOptimized: true, noThinking: true },
-  { id: '@cf/zai-org/glm-5.3', provider: 'Zhipu AI', priority: 2, description: '智谱 GLM 5.3，中文优秀', chineseOptimized: true, noThinking: true },
-  { id: '@cf/deepseek-ai/deepseek-v4-pro-0813', provider: 'DeepSeek', priority: 3, description: 'DeepSeek V4 专业版', chineseOptimized: true, noThinking: true },
-  { id: '@cf/moonshotai/kimi-k2.6', provider: 'Moonshot AI', priority: 4, description: 'Moonshot Kimi K2.6', chineseOptimized: true, noThinking: true },
-  { id: '@cf/qwen/qwen3-30b-a3b-fp8', provider: 'Alibaba/Qwen', priority: 5, description: 'Qwen 3 MoE 架构', chineseOptimized: true, noThinking: true },
-  { id: '@cf/zai-org/glm-5.2', provider: 'Zhipu AI', priority: 6, description: '智谱 GLM 5.2', chineseOptimized: true, noThinking: true },
-  { id: '@cf/deepseek-ai/deepseek-v4-flash-0731', provider: 'DeepSeek', priority: 7, description: 'DeepSeek V4 快速版', chineseOptimized: true, noThinking: true },
-  { id: '@cf/moonshotai/kimi-k2.7-code', provider: 'Moonshot AI', priority: 8, description: 'Kimi K2.7 代码增强版', chineseOptimized: true, noThinking: true },
-  { id: '@cf/zai-org/glm-5.3-flash', provider: 'Zhipu AI', priority: 9, description: '智谱 GLM 5.3 快速版', chineseOptimized: true, noThinking: true },
-  { id: '@cf/qwen/qwen2.5-coder-32b-instruct', provider: 'Alibaba/Qwen', priority: 10, description: 'Qwen 2.5 Coder 32B', chineseOptimized: true, noThinking: true },
-
-  // —— 通用模型（备选）——
-  { id: '@cf/meta/llama-4-scout-17b-16e-instruct', provider: 'Meta', priority: 11, description: 'Meta Llama 4 Scout', chineseOptimized: false, noThinking: true },
-  { id: '@cf/openai/gpt-oss-120b', provider: 'OpenAI', priority: 12, description: 'OpenAI 开源 120B', chineseOptimized: false, noThinking: true },
-  { id: '@cf/zai-org/glm-4.7-flash', provider: 'Zhipu AI', priority: 13, description: '智谱 GLM 4.7 快速版', chineseOptimized: true, noThinking: true },
-  { id: '@cf/mistralai/mistral-small-3.1-24b-instruct', provider: 'Mistral AI', priority: 14, description: 'Mistral Small 3.1', chineseOptimized: false, noThinking: false },
-  { id: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', provider: 'Meta', priority: 15, description: 'Meta Llama 3.3 70B', chineseOptimized: false, noThinking: true },
-]
+// —— 模型/提供方配置：唯一事实源 ai-config.ts（勿在此手抄）——
+export { FREE_TEXT_MODELS, OPENROUTER_FREE_MODELS }
+export type { AiModel }
 
 // —— 故障类型 ——
 
@@ -412,20 +376,6 @@ export interface UnifiedAiConfig {
     maxTokens?: number
   }
 }
-
-/** OpenRouter 免费模型链（2026-10-07 实时查询，前 10 个，顺序即降级顺序） */
-export const OPENROUTER_FREE_MODELS: string[] = [
-  'inclusionai/ling-3.1-flash',
-  'apodex/apodex-1.1-mini:free',
-  'inclusionai/ling-3.0-flash-sante:free',
-  'dots-studio/dots-3-note-preview:free',
-  'liquid/lfm-2.5-2.6b:free',
-  'nvidia/nemotron-3.5-lightning:free',
-  'thinkingmachines/inkling-small:free',
-  'poolside/laguna-s-2.1:free',
-  'thinkingmachines/inkling:free',
-  'poolside/laguna-xs-2.1:free',
-]
 
 /**
  * 创建 AI 客户端（根据配置自动选择）

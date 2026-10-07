@@ -57,3 +57,7 @@ export type { SchedulerConfig } from './scheduler.js'
 // AI 模型降级库（Cloudflare Workers AI 免费模型故障自动切换）
 export { createFallbackClient, createCloudflareAiClient, createAiClient, createOpenRouterClient, getRecommendedModels, FREE_TEXT_MODELS, OPENROUTER_FREE_MODELS, resetQuotaState, getQuotaExhaustedModels, extractResponse } from './ai-fallback.js'
 export type { AiModel, FallbackConfig, FallbackResult, FallbackReason, UnifiedAiConfig } from './ai-fallback.js'
+
+// AI 配置唯一事实源（模型链 / 备用提供方 / 站点默认模型）
+export { FALLBACK_PROVIDERS, SITE_DEFAULT_MODELS, getSiteDefaultModel } from './ai-config.js'
+export type { FallbackProvider } from './ai-config.js'

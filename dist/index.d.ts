@@ -14,3 +14,5 @@ export { ArticleScheduler, startScheduler } from './scheduler.js';
 export type { SchedulerConfig } from './scheduler.js';
 export { createFallbackClient, createCloudflareAiClient, createAiClient, createOpenRouterClient, getRecommendedModels, FREE_TEXT_MODELS, OPENROUTER_FREE_MODELS, resetQuotaState, getQuotaExhaustedModels, extractResponse } from './ai-fallback.js';
 export type { AiModel, FallbackConfig, FallbackResult, FallbackReason, UnifiedAiConfig } from './ai-fallback.js';
+export { FALLBACK_PROVIDERS, SITE_DEFAULT_MODELS, getSiteDefaultModel } from './ai-config.js';
+export type { FallbackProvider } from './ai-config.js';

@@ -1,24 +1,13 @@
 import type { AiClient } from './types.js';
+import { FREE_TEXT_MODELS, OPENROUTER_FREE_MODELS } from './ai-config.js';
+import type { AiModel } from './ai-config.js';
 /** 失败模型持久化存储接口（Workers 环境用 KV/D1，Node 环境用 fs） */
 export interface BadModelStore {
     load(): string[] | null;
     save(models: string[]): void;
 }
-export interface AiModel {
-    /** 模型 ID（Cloudflare Workers AI） */
-    id: string;
-    /** 供应商 */
-    provider: string;
-    /** 优先级（数字越小越优先） */
-    priority: number;
-    /** 说明 */
-    description: string;
-    /** 是否适合中文长文 */
-    chineseOptimized: boolean;
-    /** 是否关闭思考模式（chat_template_kwargs.thinking=false；仅支持该参数的模型标记） */
-    noThinking?: boolean;
-}
-export declare const FREE_TEXT_MODELS: AiModel[];
+export { FREE_TEXT_MODELS, OPENROUTER_FREE_MODELS };
+export type { AiModel };
 export type FallbackReason = 'quota_exceeded' | 'timeout' | 'rate_limit' | 'server_error' | 'invalid_request' | 'unknown';
 export interface FallbackConfig {
     /** Cloudflare Workers AI API 地址（默认 https://api.cloudflare.com/client/v4） */
@@ -110,8 +99,6 @@ export interface UnifiedAiConfig {
         maxTokens?: number;
     };
 }
-/** OpenRouter 免费模型链（2026-10-07 实时查询，前 10 个，顺序即降级顺序） */
-export declare const OPENROUTER_FREE_MODELS: string[];
 /**
  * 创建 AI 客户端（根据配置自动选择）
  *
