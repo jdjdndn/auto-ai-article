@@ -50,3 +50,22 @@ export declare function renderShareBar(article: {
 }, opts?: {
     shareUrl?: string;
 }): string;
+/** 生成 Article + FAQPage JSON-LD 结构化数据（SEO/GEO） */
+export declare function articleJsonLd(article: {
+    id: string;
+    title: string;
+    summary: string;
+    createdAt: string;
+    updatedAt?: string;
+    category?: string;
+    tags?: string[];
+    faq?: {
+        q: string;
+        a: string;
+    }[];
+    firstImage?: string;
+}, site: {
+    name: string;
+    url: string;
+    logo?: string;
+}): string;

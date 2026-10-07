@@ -560,3 +560,54 @@ export function renderShareBar(article: { id: string; title: string; summary?: s
     <button class="share-btn" data-action="report">内容有误？反馈</button>
   </div>`
 }
+
+/** 生成 Article + FAQPage JSON-LD 结构化数据（SEO/GEO） */
+export function articleJsonLd(article: {
+  id: string
+  title: string
+  summary: string
+  createdAt: string
+  updatedAt?: string
+  category?: string
+  tags?: string[]
+  faq?: { q: string; a: string }[]
+  firstImage?: string
+}, site: {
+  name: string
+  url: string  // 站点根 URL，如 https://example.com
+  logo?: string
+}): string {
+  const articleUrl = `${site.url}/article/${article.id}`
+  const cover = article.firstImage || `${site.url}/favicon.ico`
+  const ld: any[] = [{
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: article.title,
+    description: article.summary,
+    url: articleUrl,
+    image: cover,
+    datePublished: article.createdAt,
+    dateModified: article.updatedAt || article.createdAt,
+    articleSection: article.category || '',
+    keywords: article.tags?.join(',') || '',
+    author: { '@type': 'Organization', name: site.name, url: site.url },
+    publisher: {
+      '@type': 'Organization',
+      name: site.name,
+      logo: { '@type': 'ImageObject', url: site.logo || cover },
+    },
+    mainEntityOfPage: { '@type': 'WebPage', '@id': articleUrl },
+  }]
+  if (article.faq?.length) {
+    ld.push({
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: article.faq.map((f) => ({
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a },
+      })),
+    })
+  }
+  return JSON.stringify(ld)
+}

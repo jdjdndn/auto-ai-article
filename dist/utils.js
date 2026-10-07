@@ -19,6 +19,7 @@ exports.renderArticleCta = renderArticleCta;
 exports.renderArticleLinks = renderArticleLinks;
 exports.renderFaqSection = renderFaqSection;
 exports.renderShareBar = renderShareBar;
+exports.articleJsonLd = articleJsonLd;
 // —— JSON 提取（容忍 markdown 代码块包裹 / 前后多余文字）——
 /** 从候选字段中取第一个非空字符串（空串不能短路，否则会丢掉后面的真实内容） */
 function firstNonEmpty(...vals) {
@@ -595,4 +596,40 @@ function renderShareBar(article, opts = {}) {
     <button class="share-btn" data-action="copy-link" data-url="${escapeHtml(url)}" data-title="${escapeHtml(article.title)}" data-summary="${escapeHtml(article.summary || '')}">复制链接</button>
     <button class="share-btn" data-action="report">内容有误？反馈</button>
   </div>`;
+}
+/** 生成 Article + FAQPage JSON-LD 结构化数据（SEO/GEO） */
+function articleJsonLd(article, site) {
+    const articleUrl = `${site.url}/article/${article.id}`;
+    const cover = article.firstImage || `${site.url}/favicon.ico`;
+    const ld = [{
+            '@context': 'https://schema.org',
+            '@type': 'Article',
+            headline: article.title,
+            description: article.summary,
+            url: articleUrl,
+            image: cover,
+            datePublished: article.createdAt,
+            dateModified: article.updatedAt || article.createdAt,
+            articleSection: article.category || '',
+            keywords: article.tags?.join(',') || '',
+            author: { '@type': 'Organization', name: site.name, url: site.url },
+            publisher: {
+                '@type': 'Organization',
+                name: site.name,
+                logo: { '@type': 'ImageObject', url: site.logo || cover },
+            },
+            mainEntityOfPage: { '@type': 'WebPage', '@id': articleUrl },
+        }];
+    if (article.faq?.length) {
+        ld.push({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: article.faq.map((f) => ({
+                '@type': 'Question',
+                name: f.q,
+                acceptedAnswer: { '@type': 'Answer', text: f.a },
+            })),
+        });
+    }
+    return JSON.stringify(ld);
 }
