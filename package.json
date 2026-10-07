@@ -1,18 +1,23 @@
 {
   "name": "ai-article-pipeline",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "AI 自动文章生成管线 — 从素材到发布的完整流程，支持任意数据库后端",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
       "require": "./dist/index.js"
     },
     "./client": {
       "types": "./dist/client.d.ts",
+      "import": "./dist/client.js",
       "require": "./dist/client.js"
     }
+  },
+  "bin": {
+    "ai-article-pipeline": "./dist/cli.js"
   },
   "files": [
     "dist",

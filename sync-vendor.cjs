@@ -39,13 +39,13 @@ const TARGETS = [
 // vendor 内的 package.json（声明 CJS，覆盖根目录的 type:module）
 const VENDOR_PKG = {
   name: 'ai-article-pipeline',
-  version: '0.1.0',
+  version: '0.2.0',
   type: 'commonjs',
   main: './dist/index.js',
   types: './dist/index.d.ts',
   exports: {
-    '.': { types: './dist/index.d.ts', require: './dist/index.js' },
-    './client': { types: './dist/client.d.ts', require: './dist/client.js' },
+    '.': { types: './dist/index.d.ts', import: './dist/index.js', require: './dist/index.js' },
+    './client': { types: './dist/client.d.ts', import: './dist/client.js', require: './dist/client.js' },
   },
 }
 
