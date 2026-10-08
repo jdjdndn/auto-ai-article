@@ -4,11 +4,12 @@
 // 独立封装，不修改其他项目代码
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.OPENROUTER_FREE_MODELS = exports.FREE_TEXT_MODELS = void 0;
+exports.OpenRouterProvider = exports.CfBindingProvider = exports.FallbackChain = exports.OPENROUTER_FREE_MODELS = exports.FREE_TEXT_MODELS = void 0;
 exports.extractResponse = extractResponse;
 exports.resetQuotaState = resetQuotaState;
 exports.getQuotaExhaustedModels = getQuotaExhaustedModels;
 exports.createFallbackClient = createFallbackClient;
+exports.createBindingFallbackClient = createBindingFallbackClient;
 exports.getRecommendedModels = getRecommendedModels;
 exports.createCloudflareAiClient = createCloudflareAiClient;
 exports.createAiClient = createAiClient;
@@ -260,7 +261,126 @@ function createFallbackClient(config) {
         throw new Error(`所有模型均失败。尝试记录：${attempted.map((a) => `${a.model}(${a.reason || 'error'})`).join(', ')}`);
     };
 }
-// —— 获取推荐模型列表 ——
+/** 责任链：多个 provider 依次尝试，一个全失败切下一个 */
+class FallbackChain {
+    providers;
+    log;
+    constructor(providers, logFn) {
+        this.providers = providers;
+        this.log = logFn || ((...args) => console.log(new Date().toISOString(), '[ai-chain]', ...args));
+    }
+    async run(messages) {
+        const errors = [];
+        for (const provider of this.providers) {
+            try {
+                return await provider.try(messages);
+            }
+            catch (e) {
+                const msg = String(e?.message || e);
+                errors.push(`${provider.name}: ${msg}`);
+                this.log(`${provider.name} 失败，切换下一个 provider`);
+            }
+        }
+        throw new Error(`所有 AI provider 均失败：\n${errors.join('\n')}`);
+    }
+}
+exports.FallbackChain = FallbackChain;
+/** CF Workers AI binding provider */
+class CfBindingProvider {
+    name = 'cloudflare-binding';
+    binding;
+    models;
+    maxTokens;
+    timeoutMs;
+    badModels = new Set();
+    quotaExhausted = new Set();
+    log;
+    constructor(config) {
+        this.binding = config.binding;
+        this.models = (config.models || ai_config_js_1.FREE_TEXT_MODELS)
+            .slice()
+            .sort((a, b) => a.priority - b.priority)
+            .slice(0, config.maxDepth || ai_config_js_1.FREE_TEXT_MODELS.length);
+        this.maxTokens = config.maxTokens || 4096;
+        this.timeoutMs = config.timeoutMs || 120_000;
+        this.log = config.logFn || ((...args) => console.log(new Date().toISOString(), '[ai-cf]', ...args));
+    }
+    async try(messages) {
+        const unavailable = [...this.quotaExhausted, ...this.badModels];
+        const available = this.models.filter((m) => !unavailable.includes(m.id));
+        if (!available.length)
+            throw new Error('CF 所有模型当天不可用');
+        for (const model of available) {
+            try {
+                const timer = setTimeout(() => { }, this.timeoutMs);
+                let out;
+                try {
+                    const body = { messages, max_tokens: this.maxTokens };
+                    if (model.noThinking)
+                        body.chat_template_kwargs = { thinking: false };
+                    out = await this.binding.run(model.id, body);
+                }
+                finally {
+                    clearTimeout(timer);
+                }
+                const content = extractResponse(out);
+                if (!content)
+                    throw new Error('AI 没有返回内容');
+                const fr = out?.result?.choices?.[0]?.finish_reason || out?.choices?.[0]?.finish_reason;
+                if (fr === 'length')
+                    throw new Error('AI 输出被截断');
+                this.log(`成功：${model.id}`);
+                return content;
+            }
+            catch (e) {
+                const reason = classifyError(e);
+                this.log(`失败：${model.id}（${reason}）`);
+                if (reason === 'quota_exceeded')
+                    this.quotaExhausted.add(model.id);
+                this.badModels.add(model.id);
+            }
+        }
+        throw new Error(`CF 所有模型失败：${[...unavailable].join(', ')}`);
+    }
+    getBadModels() {
+        return Array.from(this.badModels);
+    }
+}
+exports.CfBindingProvider = CfBindingProvider;
+/** OpenRouter provider（包装 createOpenRouterClient） */
+class OpenRouterProvider {
+    name = 'openrouter';
+    client;
+    badModels = new Set();
+    constructor(config) {
+        this.client = createOpenRouterClient(config);
+    }
+    async try(messages) {
+        return this.client(messages);
+    }
+    getBadModels() {
+        return Array.from(this.badModels);
+    }
+}
+exports.OpenRouterProvider = OpenRouterProvider;
+function createBindingFallbackClient(config) {
+    const log = (...args) => console.log(new Date().toISOString(), '[ai-fallback]', ...args);
+    const providers = [
+        new CfBindingProvider({
+            binding: config.binding,
+            models: config.models,
+            maxDepth: config.maxDepth,
+            maxTokens: config.maxTokens,
+            timeoutMs: config.timeoutMs,
+            logFn: (...args) => console.log(new Date().toISOString(), '[ai-cf]', ...args),
+        }),
+    ];
+    if (config.openrouter) {
+        providers.push(new OpenRouterProvider(config.openrouter));
+    }
+    const chain = new FallbackChain(providers, log);
+    return (messages) => chain.run(messages);
+}
 function getRecommendedModels(chineseOnly = true) {
     return ai_config_js_1.FREE_TEXT_MODELS.filter((m) => !chineseOnly || m.chineseOptimized).sort((a, b) => a.priority - b.priority);
 }
@@ -279,7 +399,25 @@ function createCloudflareAiClient(config) {
  */
 function createAiClient(config) {
     if (config.cloudflare) {
-        return createFallbackClient(config.cloudflare);
+        const cfClient = createFallbackClient(config.cloudflare);
+        // 同时配了 openrouter → CF 全部模型失败时回退到 OpenRouter
+        if (config.openrouter) {
+            const orClient = createOpenRouterClient(config.openrouter);
+            return async (messages) => {
+                try {
+                    return await cfClient(messages);
+                }
+                catch (e) {
+                    const msg = String(e?.message || e);
+                    if (msg.includes('所有模型') || msg.includes('不可用') || msg.includes('均失败')) {
+                        console.log('[ai-fallback] Cloudflare 模型全部不可用，回退到 OpenRouter');
+                        return orClient(messages);
+                    }
+                    throw e;
+                }
+            };
+        }
+        return cfClient;
     }
     if (config.openrouter) {
         return createOpenRouterClient(config.openrouter);

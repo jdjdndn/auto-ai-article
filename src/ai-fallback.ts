@@ -334,7 +334,171 @@ export function createFallbackClient(config: FallbackConfig): AiClient {
   }
 }
 
-// —— 获取推荐模型列表 ——
+// —— 策略模式 + 责任链：AI Provider 抽象 ——
+
+/** AI 提供方接口（策略模式） */
+export interface AiProvider {
+  /** 提供方名称 */
+  name: string
+  /** 尝试生成，成功返回内容，失败抛错 */
+  try(messages: AiMessage[]): Promise<string>
+  /** 获取已记录的坏模型列表 */
+  getBadModels(): string[]
+}
+
+/** 责任链：多个 provider 依次尝试，一个全失败切下一个 */
+export class FallbackChain {
+  private providers: AiProvider[]
+  private log: (...args: unknown[]) => void
+
+  constructor(providers: AiProvider[], logFn?: (...args: unknown[]) => void) {
+    this.providers = providers
+    this.log = logFn || ((...args: unknown[]) => console.log(new Date().toISOString(), '[ai-chain]', ...args))
+  }
+
+  async run(messages: AiMessage[]): Promise<string> {
+    const errors: string[] = []
+    for (const provider of this.providers) {
+      try {
+        return await provider.try(messages)
+      } catch (e: any) {
+        const msg = String(e?.message || e)
+        errors.push(`${provider.name}: ${msg}`)
+        this.log(`${provider.name} 失败，切换下一个 provider`)
+      }
+    }
+    throw new Error(`所有 AI provider 均失败：\n${errors.join('\n')}`)
+  }
+}
+
+/** CF Workers AI binding provider */
+export class CfBindingProvider implements AiProvider {
+  name = 'cloudflare-binding'
+  private binding: any
+  private models: AiModel[]
+  private maxTokens: number
+  private timeoutMs: number
+  private badModels = new Set<string>()
+  private quotaExhausted = new Set<string>()
+  private log: (...args: unknown[]) => void
+
+  constructor(config: {
+    binding: any
+    models?: AiModel[]
+    maxDepth?: number
+    maxTokens?: number
+    timeoutMs?: number
+    logFn?: (...args: unknown[]) => void
+  }) {
+    this.binding = config.binding
+    this.models = (config.models || FREE_TEXT_MODELS)
+      .slice()
+      .sort((a, b) => a.priority - b.priority)
+      .slice(0, config.maxDepth || FREE_TEXT_MODELS.length)
+    this.maxTokens = config.maxTokens || 4096
+    this.timeoutMs = config.timeoutMs || 120_000
+    this.log = config.logFn || ((...args: unknown[]) => console.log(new Date().toISOString(), '[ai-cf]', ...args))
+  }
+
+  async try(messages: AiMessage[]): Promise<string> {
+    const unavailable = [...this.quotaExhausted, ...this.badModels]
+    const available = this.models.filter((m) => !unavailable.includes(m.id))
+    if (!available.length) throw new Error('CF 所有模型当天不可用')
+
+    for (const model of available) {
+      try {
+        const timer = setTimeout(() => {}, this.timeoutMs)
+        let out: any
+        try {
+          const body: Record<string, unknown> = { messages, max_tokens: this.maxTokens }
+          if (model.noThinking) body.chat_template_kwargs = { thinking: false }
+          out = await this.binding.run(model.id, body)
+        } finally {
+          clearTimeout(timer)
+        }
+        const content = extractResponse(out)
+        if (!content) throw new Error('AI 没有返回内容')
+        const fr = out?.result?.choices?.[0]?.finish_reason || out?.choices?.[0]?.finish_reason
+        if (fr === 'length') throw new Error('AI 输出被截断')
+        this.log(`成功：${model.id}`)
+        return content
+      } catch (e: any) {
+        const reason = classifyError(e)
+        this.log(`失败：${model.id}（${reason}）`)
+        if (reason === 'quota_exceeded') this.quotaExhausted.add(model.id)
+        this.badModels.add(model.id)
+      }
+    }
+    throw new Error(`CF 所有模型失败：${[...unavailable].join(', ')}`)
+  }
+
+  getBadModels(): string[] {
+    return Array.from(this.badModels)
+  }
+}
+
+/** OpenRouter provider（包装 createOpenRouterClient） */
+export class OpenRouterProvider implements AiProvider {
+  name = 'openrouter'
+  private client: AiClient
+  private badModels = new Set<string>()
+
+  constructor(config: { apiKey: string; baseUrl?: string; models?: string[]; timeoutMs?: number }) {
+    this.client = createOpenRouterClient(config)
+  }
+
+  async try(messages: AiMessage[]): Promise<string> {
+    return this.client(messages)
+  }
+
+  getBadModels(): string[] {
+    return Array.from(this.badModels)
+  }
+}
+
+// —— Binding 降级客户端（基于 FallbackChain）——
+
+export interface BindingFallbackConfig {
+  /** Cloudflare Workers AI binding 对象（env.AI） */
+  binding: any
+  /** CF 模型列表（默认 FREE_TEXT_MODELS） */
+  models?: AiModel[]
+  /** 最大降级深度 */
+  maxDepth?: number
+  /** 单次请求超时（毫秒，默认 120000） */
+  timeoutMs?: number
+  /** 生成 token 预算（默认 4096） */
+  maxTokens?: number
+  /** OpenRouter 兜底配置（不传则不启用） */
+  openrouter?: {
+    apiKey: string
+    baseUrl?: string
+    models?: string[]
+    timeoutMs?: number
+  }
+}
+
+export function createBindingFallbackClient(config: BindingFallbackConfig): AiClient {
+  const log = (...args: unknown[]) => console.log(new Date().toISOString(), '[ai-fallback]', ...args)
+
+  const providers: AiProvider[] = [
+    new CfBindingProvider({
+      binding: config.binding,
+      models: config.models,
+      maxDepth: config.maxDepth,
+      maxTokens: config.maxTokens,
+      timeoutMs: config.timeoutMs,
+      logFn: (...args: unknown[]) => console.log(new Date().toISOString(), '[ai-cf]', ...args),
+    }),
+  ]
+
+  if (config.openrouter) {
+    providers.push(new OpenRouterProvider(config.openrouter))
+  }
+
+  const chain = new FallbackChain(providers, log)
+  return (messages: AiMessage[]) => chain.run(messages)
+}
 
 export function getRecommendedModels(chineseOnly = true): AiModel[] {
   return FREE_TEXT_MODELS.filter((m) => !chineseOnly || m.chineseOptimized).sort((a, b) => a.priority - b.priority)
@@ -390,7 +554,24 @@ export interface UnifiedAiConfig {
  */
 export function createAiClient(config: UnifiedAiConfig): AiClient {
   if (config.cloudflare) {
-    return createFallbackClient(config.cloudflare)
+    const cfClient = createFallbackClient(config.cloudflare)
+    // 同时配了 openrouter → CF 全部模型失败时回退到 OpenRouter
+    if (config.openrouter) {
+      const orClient = createOpenRouterClient(config.openrouter)
+      return async (messages: AiMessage[]): Promise<string> => {
+        try {
+          return await cfClient(messages)
+        } catch (e: any) {
+          const msg = String(e?.message || e)
+          if (msg.includes('所有模型') || msg.includes('不可用') || msg.includes('均失败')) {
+            console.log('[ai-fallback] Cloudflare 模型全部不可用，回退到 OpenRouter')
+            return orClient(messages)
+          }
+          throw e
+        }
+      }
+    }
+    return cfClient
   }
 
   if (config.openrouter) {

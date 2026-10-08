@@ -27,6 +27,23 @@ export interface AiModel {
 // 免费额度：每个模型每日 10,000 neurons
 
 export const FREE_TEXT_MODELS: AiModel[] = [
+  // —— Workers Free 计划可用模型（优先，免额度）——
+  {
+    id: '@cf/meta/llama-3.2-3b-instruct',
+    provider: 'Meta',
+    priority: 0,
+    description: 'Llama 3.2 3B（Free 计划可用）',
+    chineseOptimized: false,
+    noThinking: true,
+  },
+  {
+    id: '@cf/meta/llama-3.2-1b-instruct',
+    provider: 'Meta',
+    priority: 0,
+    description: 'Llama 3.2 1B（Free 计划可用）',
+    chineseOptimized: false,
+    noThinking: true,
+  },
   // —— 中文优化模型（优先）——
   {
     id: '@cf/qwen/qwen3.8-27b',

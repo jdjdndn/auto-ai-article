@@ -1,4 +1,4 @@
-import type { AiClient } from './types.js';
+import type { AiClient, AiMessage } from './types.js';
 import { FREE_TEXT_MODELS, OPENROUTER_FREE_MODELS } from './ai-config.js';
 import type { AiModel } from './ai-config.js';
 /** 失败模型持久化存储接口（Workers 环境用 KV/D1，Node 环境用 fs） */
@@ -67,6 +67,77 @@ export declare function resetQuotaState(): void;
 /** 获取当前额度用完的模型列表 */
 export declare function getQuotaExhaustedModels(): string[];
 export declare function createFallbackClient(config: FallbackConfig): AiClient;
+/** AI 提供方接口（策略模式） */
+export interface AiProvider {
+    /** 提供方名称 */
+    name: string;
+    /** 尝试生成，成功返回内容，失败抛错 */
+    try(messages: AiMessage[]): Promise<string>;
+    /** 获取已记录的坏模型列表 */
+    getBadModels(): string[];
+}
+/** 责任链：多个 provider 依次尝试，一个全失败切下一个 */
+export declare class FallbackChain {
+    private providers;
+    private log;
+    constructor(providers: AiProvider[], logFn?: (...args: unknown[]) => void);
+    run(messages: AiMessage[]): Promise<string>;
+}
+/** CF Workers AI binding provider */
+export declare class CfBindingProvider implements AiProvider {
+    name: string;
+    private binding;
+    private models;
+    private maxTokens;
+    private timeoutMs;
+    private badModels;
+    private quotaExhausted;
+    private log;
+    constructor(config: {
+        binding: any;
+        models?: AiModel[];
+        maxDepth?: number;
+        maxTokens?: number;
+        timeoutMs?: number;
+        logFn?: (...args: unknown[]) => void;
+    });
+    try(messages: AiMessage[]): Promise<string>;
+    getBadModels(): string[];
+}
+/** OpenRouter provider（包装 createOpenRouterClient） */
+export declare class OpenRouterProvider implements AiProvider {
+    name: string;
+    private client;
+    private badModels;
+    constructor(config: {
+        apiKey: string;
+        baseUrl?: string;
+        models?: string[];
+        timeoutMs?: number;
+    });
+    try(messages: AiMessage[]): Promise<string>;
+    getBadModels(): string[];
+}
+export interface BindingFallbackConfig {
+    /** Cloudflare Workers AI binding 对象（env.AI） */
+    binding: any;
+    /** CF 模型列表（默认 FREE_TEXT_MODELS） */
+    models?: AiModel[];
+    /** 最大降级深度 */
+    maxDepth?: number;
+    /** 单次请求超时（毫秒，默认 120000） */
+    timeoutMs?: number;
+    /** 生成 token 预算（默认 4096） */
+    maxTokens?: number;
+    /** OpenRouter 兜底配置（不传则不启用） */
+    openrouter?: {
+        apiKey: string;
+        baseUrl?: string;
+        models?: string[];
+        timeoutMs?: number;
+    };
+}
+export declare function createBindingFallbackClient(config: BindingFallbackConfig): AiClient;
 export declare function getRecommendedModels(chineseOnly?: boolean): AiModel[];
 export declare function createCloudflareAiClient(config: FallbackConfig): AiClient;
 export interface UnifiedAiConfig {
