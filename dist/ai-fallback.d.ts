@@ -81,6 +81,10 @@ export declare class FallbackChain {
     private providers;
     private log;
     constructor(providers: AiProvider[], logFn?: (...args: unknown[]) => void);
+    /** 在链首插入 provider（最高优先级，如本地 AI） */
+    prepend(provider: AiProvider): this;
+    /** 在链尾追加 provider（最低优先级，如兜底） */
+    append(provider: AiProvider): this;
     run(messages: AiMessage[]): Promise<string>;
 }
 /** CF Workers AI binding provider */
@@ -118,6 +122,21 @@ export declare class OpenRouterProvider implements AiProvider {
     try(messages: AiMessage[]): Promise<string>;
     getBadModels(): string[];
 }
+/** 本地 AI provider（Ollama / LM Studio 等 OpenAI 兼容 API） */
+export declare class LocalAiProvider implements AiProvider {
+    name: string;
+    private baseUrl;
+    private model;
+    private apiKey;
+    private badModels;
+    constructor(config: {
+        baseUrl: string;
+        model?: string;
+        apiKey?: string;
+    });
+    try(messages: AiMessage[]): Promise<string>;
+    getBadModels(): string[];
+}
 export interface BindingFallbackConfig {
     /** Cloudflare Workers AI binding 对象（env.AI） */
     binding: any;
@@ -129,6 +148,12 @@ export interface BindingFallbackConfig {
     timeoutMs?: number;
     /** 生成 token 预算（默认 4096） */
     maxTokens?: number;
+    /** 本地 AI（Ollama 等），最高优先级，不传则不启用 */
+    local?: {
+        baseUrl: string;
+        model?: string;
+        apiKey?: string;
+    };
     /** OpenRouter 兜底配置（不传则不启用） */
     openrouter?: {
         apiKey: string;
@@ -138,6 +163,8 @@ export interface BindingFallbackConfig {
     };
 }
 export declare function createBindingFallbackClient(config: BindingFallbackConfig): AiClient;
+/** 创建 FallbackChain 实例（可 prepend/append 额外 provider） */
+export declare function createFallbackChain(config: BindingFallbackConfig): FallbackChain;
 export declare function getRecommendedModels(chineseOnly?: boolean): AiModel[];
 export declare function createCloudflareAiClient(config: FallbackConfig): AiClient;
 export interface UnifiedAiConfig {

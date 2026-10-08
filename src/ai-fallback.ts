@@ -356,6 +356,18 @@ export class FallbackChain {
     this.log = logFn || ((...args: unknown[]) => console.log(new Date().toISOString(), '[ai-chain]', ...args))
   }
 
+  /** 在链首插入 provider（最高优先级，如本地 AI） */
+  prepend(provider: AiProvider): this {
+    this.providers.unshift(provider)
+    return this
+  }
+
+  /** 在链尾追加 provider（最低优先级，如兜底） */
+  append(provider: AiProvider): this {
+    this.providers.push(provider)
+    return this
+  }
+
   async run(messages: AiMessage[]): Promise<string> {
     const errors: string[] = []
     for (const provider of this.providers) {
@@ -456,6 +468,41 @@ export class OpenRouterProvider implements AiProvider {
   }
 }
 
+/** 本地 AI provider（Ollama / LM Studio 等 OpenAI 兼容 API） */
+export class LocalAiProvider implements AiProvider {
+  name = 'local'
+  private baseUrl: string
+  private model: string
+  private apiKey: string | undefined
+  private badModels = new Set<string>()
+
+  constructor(config: { baseUrl: string; model?: string; apiKey?: string }) {
+    this.baseUrl = config.baseUrl.replace(/\/+$/, '')
+    this.model = config.model || 'qwen2.5:14b'
+    this.apiKey = config.apiKey
+  }
+
+  async try(messages: AiMessage[]): Promise<string> {
+    const res = await fetch(`${this.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {}),
+      },
+      body: JSON.stringify({ model: this.model, messages, max_tokens: 4096 }),
+    })
+    if (!res.ok) throw new Error(`本地 AI 返回 ${res.status}: ${await res.text()}`)
+    const data: any = await res.json()
+    const content = data?.choices?.[0]?.message?.content
+    if (!content) throw new Error('本地 AI 没有返回内容')
+    return content
+  }
+
+  getBadModels(): string[] {
+    return Array.from(this.badModels)
+  }
+}
+
 // —— Binding 降级客户端（基于 FallbackChain）——
 
 export interface BindingFallbackConfig {
@@ -469,6 +516,12 @@ export interface BindingFallbackConfig {
   timeoutMs?: number
   /** 生成 token 预算（默认 4096） */
   maxTokens?: number
+  /** 本地 AI（Ollama 等），最高优先级，不传则不启用 */
+  local?: {
+    baseUrl: string
+    model?: string
+    apiKey?: string
+  }
   /** OpenRouter 兜底配置（不传则不启用） */
   openrouter?: {
     apiKey: string
@@ -479,25 +532,38 @@ export interface BindingFallbackConfig {
 }
 
 export function createBindingFallbackClient(config: BindingFallbackConfig): AiClient {
+  const chain = createFallbackChain(config)
+  return (messages: AiMessage[]) => chain.run(messages)
+}
+
+/** 创建 FallbackChain 实例（可 prepend/append 额外 provider） */
+export function createFallbackChain(config: BindingFallbackConfig): FallbackChain {
   const log = (...args: unknown[]) => console.log(new Date().toISOString(), '[ai-fallback]', ...args)
 
-  const providers: AiProvider[] = [
-    new CfBindingProvider({
-      binding: config.binding,
-      models: config.models,
-      maxDepth: config.maxDepth,
-      maxTokens: config.maxTokens,
-      timeoutMs: config.timeoutMs,
-      logFn: (...args: unknown[]) => console.log(new Date().toISOString(), '[ai-cf]', ...args),
-    }),
-  ]
+  const providers: AiProvider[] = []
+
+  // 1. 本地 AI（最高优先级）
+  if (config.local) {
+    providers.push(new LocalAiProvider(config.local))
+  }
+
+  // 2. CF binding
+  providers.push(new CfBindingProvider({
+    binding: config.binding,
+    models: config.models,
+    maxDepth: config.maxDepth,
+    maxTokens: config.maxTokens,
+    timeoutMs: config.timeoutMs,
+    logFn: (...args: unknown[]) => console.log(new Date().toISOString(), '[ai-cf]', ...args),
+  }))
+
+  // 3. OpenRouter（兜底）
 
   if (config.openrouter) {
     providers.push(new OpenRouterProvider(config.openrouter))
   }
 
-  const chain = new FallbackChain(providers, log)
-  return (messages: AiMessage[]) => chain.run(messages)
+  return new FallbackChain(providers, log)
 }
 
 export function getRecommendedModels(chineseOnly = true): AiModel[] {

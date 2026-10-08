@@ -4,12 +4,13 @@
 // 独立封装，不修改其他项目代码
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.OpenRouterProvider = exports.CfBindingProvider = exports.FallbackChain = exports.OPENROUTER_FREE_MODELS = exports.FREE_TEXT_MODELS = void 0;
+exports.LocalAiProvider = exports.OpenRouterProvider = exports.CfBindingProvider = exports.FallbackChain = exports.OPENROUTER_FREE_MODELS = exports.FREE_TEXT_MODELS = void 0;
 exports.extractResponse = extractResponse;
 exports.resetQuotaState = resetQuotaState;
 exports.getQuotaExhaustedModels = getQuotaExhaustedModels;
 exports.createFallbackClient = createFallbackClient;
 exports.createBindingFallbackClient = createBindingFallbackClient;
+exports.createFallbackChain = createFallbackChain;
 exports.getRecommendedModels = getRecommendedModels;
 exports.createCloudflareAiClient = createCloudflareAiClient;
 exports.createAiClient = createAiClient;
@@ -269,6 +270,16 @@ class FallbackChain {
         this.providers = providers;
         this.log = logFn || ((...args) => console.log(new Date().toISOString(), '[ai-chain]', ...args));
     }
+    /** 在链首插入 provider（最高优先级，如本地 AI） */
+    prepend(provider) {
+        this.providers.unshift(provider);
+        return this;
+    }
+    /** 在链尾追加 provider（最低优先级，如兜底） */
+    append(provider) {
+        this.providers.push(provider);
+        return this;
+    }
     async run(messages) {
         const errors = [];
         for (const provider of this.providers) {
@@ -363,23 +374,66 @@ class OpenRouterProvider {
     }
 }
 exports.OpenRouterProvider = OpenRouterProvider;
+/** 本地 AI provider（Ollama / LM Studio 等 OpenAI 兼容 API） */
+class LocalAiProvider {
+    name = 'local';
+    baseUrl;
+    model;
+    apiKey;
+    badModels = new Set();
+    constructor(config) {
+        this.baseUrl = config.baseUrl.replace(/\/+$/, '');
+        this.model = config.model || 'qwen2.5:14b';
+        this.apiKey = config.apiKey;
+    }
+    async try(messages) {
+        const res = await fetch(`${this.baseUrl}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {}),
+            },
+            body: JSON.stringify({ model: this.model, messages, max_tokens: 4096 }),
+        });
+        if (!res.ok)
+            throw new Error(`本地 AI 返回 ${res.status}: ${await res.text()}`);
+        const data = await res.json();
+        const content = data?.choices?.[0]?.message?.content;
+        if (!content)
+            throw new Error('本地 AI 没有返回内容');
+        return content;
+    }
+    getBadModels() {
+        return Array.from(this.badModels);
+    }
+}
+exports.LocalAiProvider = LocalAiProvider;
 function createBindingFallbackClient(config) {
+    const chain = createFallbackChain(config);
+    return (messages) => chain.run(messages);
+}
+/** 创建 FallbackChain 实例（可 prepend/append 额外 provider） */
+function createFallbackChain(config) {
     const log = (...args) => console.log(new Date().toISOString(), '[ai-fallback]', ...args);
-    const providers = [
-        new CfBindingProvider({
-            binding: config.binding,
-            models: config.models,
-            maxDepth: config.maxDepth,
-            maxTokens: config.maxTokens,
-            timeoutMs: config.timeoutMs,
-            logFn: (...args) => console.log(new Date().toISOString(), '[ai-cf]', ...args),
-        }),
-    ];
+    const providers = [];
+    // 1. 本地 AI（最高优先级）
+    if (config.local) {
+        providers.push(new LocalAiProvider(config.local));
+    }
+    // 2. CF binding
+    providers.push(new CfBindingProvider({
+        binding: config.binding,
+        models: config.models,
+        maxDepth: config.maxDepth,
+        maxTokens: config.maxTokens,
+        timeoutMs: config.timeoutMs,
+        logFn: (...args) => console.log(new Date().toISOString(), '[ai-cf]', ...args),
+    }));
+    // 3. OpenRouter（兜底）
     if (config.openrouter) {
         providers.push(new OpenRouterProvider(config.openrouter));
     }
-    const chain = new FallbackChain(providers, log);
-    return (messages) => chain.run(messages);
+    return new FallbackChain(providers, log);
 }
 function getRecommendedModels(chineseOnly = true) {
     return ai_config_js_1.FREE_TEXT_MODELS.filter((m) => !chineseOnly || m.chineseOptimized).sort((a, b) => a.priority - b.priority);
