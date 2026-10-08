@@ -303,7 +303,7 @@ for (const s of STATIONS) {
   const name = s.split(path.sep).pop();
   if (ONLY && !ONLY.includes(name)) continue;
   if (!fs.existsSync(path.join(s, 'package.json'))) continue;
-    pushTasks.push({ fn: () => runAsync('git add -A && git commit -m "vendor update" && git push', s, 'push ' + name, 180000, 2) });
+    pushTasks.push({ fn: () => runAsync('git add -A && (git commit -m "vendor update" || true) && git push', s, 'push ' + name, 180000, 2) });
 }
 const pushResults = await runPool(pushTasks, PUSH_CONC);
 pushResults.forEach((r, i) => console.log(`  ${r.ok ? '✓' : '✗'} ${r.label} ${fmt(r.ms)} (${i + 1}/${pushResults.length})${r.ok ? '' : '  ' + (r.error || '')}`));
