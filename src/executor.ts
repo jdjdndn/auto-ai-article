@@ -1,20 +1,25 @@
 // ============================================================
 // 执行器 — 完整的每日生成流程编排
 // 从 article-site/scripts/scheduled-generate.mjs + server/utils/daily-generate.ts 提取
-// 本地网关健康探测兼容 token-free-gateway（/health）与普通 OpenAI 兼容网关（/models 回退）
+// 本地网关逻辑抽到 local-gateway.ts，惰性 require：纯云端站不加载本地发文代码
 // ============================================================
 
-import { spawn } from 'node:child_process'
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
 import type { PipelineConfig, PipelineRunResult, RunLogInput } from './types.js'
-import { createPipeline, withRetry, type PipelineDB } from './pipeline.js'
+import { createPipeline, type PipelineDB } from './pipeline.js'
+import type { LocalGatewayProbe } from './local-gateway.js'
+export type { LocalGatewayProbe }
 
 // —— 执行器配置 ——
 
 export interface ExecutorConfig extends PipelineConfig {
   /** 每日目标发布篇数（默认 3） */
   dailyTarget?: number
+  /**
+   * 生成前先发布到期草稿（"优先发草稿"：先发布 publishAt 已到期的 draft，返回本次发布数）。
+   * 在当日防重统计之前调用，发布数计入 getPublishedToday 的"今日已发布"口径，
+   * 剩余目标（dailyTarget - 已发布）由生成补足。缺省不启用（行为不变）。
+   */
+  publishDueDrafts?: () => Promise<number>
   /** 本地 AI 网关地址（默认 http://localhost:3456/v1） */
   localGateway?: string
   /** 本地 AI 模型名称（默认 deepseek-chat） */
@@ -73,172 +78,6 @@ export interface ExecutorResult {
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 
-/** 执行自愈命令（shell 模式，最多等 30s；命令自身不应阻塞，如内部用 Start-Process） */
-async function runCommand(command: string, log: (...args: unknown[]) => void): Promise<void> {
-  return new Promise((resolve) => {
-    log(`执行自愈命令: ${command}`)
-    let child: ReturnType<typeof spawn> | null = null
-    try {
-      child = spawn(command, { shell: true, windowsHide: true, stdio: 'ignore' })
-    } catch (e: any) {
-      log(`自愈命令启动失败: ${e.message}`)
-      resolve()
-      return
-    }
-    const timer = setTimeout(() => {
-      try { child?.kill() } catch { /* noop */ }
-      resolve()
-    }, 30_000)
-    child.on('exit', () => { clearTimeout(timer); resolve() })
-    child.on('error', () => { clearTimeout(timer); resolve() })
-  })
-}
-
-// —— 本地 AI 网关客户端（复用公共 withRetry：慢启动重试 + 可配超时 + 模型轮换）——
-
-function createLocalGatewayClient(config: {
-  gateway: string
-  models: string[]
-  timeoutMs: number
-  logger?: (...args: unknown[]) => void
-}) {
-  const log = config.logger || ((...args: unknown[]) => console.log(new Date().toISOString(), '[executor]', ...args))
-  const models = config.models.length ? config.models : ['deepseek-chat']
-  return async (messages: Array<{ role: string; content: string }>): Promise<string> => {
-    return withRetry(
-      async (attempt) => {
-        // 每轮尝试换下一个模型：单模型时行为不变（同模型 3 次重试），多模型时 A→B→C 轮换
-        const model = models[attempt % models.length]
-        try {
-          const res = await fetch(`${config.gateway}/chat/completions`, {
-            method: 'POST',
-            signal: AbortSignal.timeout(config.timeoutMs),
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              model,
-              messages,
-              stream: false,
-            }),
-          })
-          if (!res.ok) throw new Error(`AI 网关 HTTP ${res.status}`)
-          const data: any = await res.json()
-          const content = data?.choices?.[0]?.message?.content ?? ''
-          if (!content.trim()) throw new Error('AI 网关没有返回内容')
-          return content
-        } catch (e: any) {
-          log(`网关第 ${attempt + 1} 次失败（模型 ${model}）: ${e.message}`)
-          throw e
-        }
-      },
-      2,
-      '网关',
-      undefined,
-      [15_000, 30_000],
-    )
-  }
-}
-
-// —— 跨进程/跨站互斥锁（原子 mkdir；带 owner.json 过期检测）——
-// 多站同机共用本地网关时，配置同一 localLockFile 即可全局串行化本地发文。
-
-async function acquireLock(file: string, waitMs: number, staleMs: number, log: (...args: unknown[]) => void): Promise<boolean> {
-  const deadline = Date.now() + waitMs
-  for (;;) {
-    try {
-      mkdirSync(file)
-    } catch {
-      // 锁已存在：检查是否过期（owner.ts 超时则强占，即使 waitMs=0）
-      let owner: { pid?: number; ts?: number } | null = null
-      try {
-        const raw = readFileSync(join(file, 'owner.json'), 'utf-8').replace(/^\uFEFF/, '') // 容忍 BOM
-        owner = JSON.parse(raw)
-      } catch { /* owner.json 缺失/损坏：不接管 */ }
-      if (owner && typeof owner.ts === 'number' && Date.now() - owner.ts > staleMs) {
-        log(`互斥锁已过期（${Math.round((Date.now() - owner.ts) / 1000)}s），强制接管`)
-        rmSync(file, { recursive: true, force: true })
-        continue // 回到循环顶部重新 mkdir（for 循环的 continue 不跳过条件检查）
-      }
-      if (Date.now() >= deadline) return false
-      log(`本地网关正被其他站点占用，等待互斥锁（剩 ${Math.max(0, Math.round((deadline - Date.now()) / 1000))}s）`)
-      await sleep(5_000)
-      continue
-    }
-    try {
-      writeFileSync(join(file, 'owner.json'), JSON.stringify({ pid: process.pid, ts: Date.now() }))
-    } catch { /* noop */ }
-    return true
-  }
-}
-
-function releaseLock(file: string): void {
-  try { rmSync(file, { recursive: true, force: true }) } catch { /* noop */ }
-}
-
-// —— 本地网关探测 ——
-
-export interface LocalGatewayProbe {
-  /** 网关可用（可发 AI 请求） */
-  online: boolean
-  /** token-free-gateway degraded（status:"degraded"，browser disconnected） */
-  degraded: boolean
-  /** 会话过期（status:"session_expired"）或 /v1/models 返回空列表（未授权） */
-  sessionExpired: boolean
-  /** 可用模型列表（可能为空） */
-  models: string[]
-}
-
-async function fetchJson(url: string, timeoutMs: number): Promise<any | null> {
-  try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) })
-    if (!res.ok) return null
-    return await res.json()
-  } catch {
-    return null
-  }
-}
-
-async function listLocalModels(gateway: string, timeoutMs: number): Promise<string[]> {
-  const data = await fetchJson(`${gateway}/models`, timeoutMs)
-  const arr = Array.isArray(data?.data) ? data.data : null
-  if (!arr) return []
-  return arr
-    .map((m: any) => String(m?.id || '').trim())
-    .filter(Boolean)
-}
-
-/**
- * 探测本地网关。
- * TFG 语义（src/server.ts /health）：status 'ok'|'degraded'|'session_expired'，browser 'connected'|'disconnected'。
- * - ok + connected → 在线
- * - degraded（browser disconnected）→ 不可发请求，需拉起 Chrome
- * - session_expired → 需重新 webauth
- * 非 TFG 网关没有 /health → 回退老逻辑 /v1/models（200 且有模型即在线）
- */
-async function probeLocalGateway(gateway: string, timeoutMs = 10_000): Promise<LocalGatewayProbe> {
-  const health = await fetchJson(`${gateway}/health`, timeoutMs)
-  if (health && typeof health === 'object') {
-    const status = String(health?.status || '')
-    const models = await listLocalModels(gateway, timeoutMs)
-    if (status === 'ok') {
-      const browser = String(health?.browser || '')
-      if (browser === 'connected') {
-        return { online: true, degraded: false, sessionExpired: false, models }
-      }
-      // status ok 但浏览器未连接：浏览器会话不可用，按 degraded 处理
-      return { online: false, degraded: true, sessionExpired: false, models }
-    }
-    if (status === 'degraded') {
-      return { online: false, degraded: true, sessionExpired: false, models }
-    }
-    if (status === 'session_expired') {
-      return { online: false, degraded: false, sessionExpired: true, models }
-    }
-    // 其它 status：以 /models 为准
-  }
-  const models = await listLocalModels(gateway, timeoutMs)
-  return { online: models.length > 0, degraded: false, sessionExpired: models.length === 0, models }
-}
-
 // —— 执行器 ——
 
 export async function execute(db: PipelineDB, config: ExecutorConfig = {}): Promise<ExecutorResult> {
@@ -250,14 +89,25 @@ export async function execute(db: PipelineDB, config: ExecutorConfig = {}): Prom
   const dryRun = config.dryRun ?? false
   const log = config.logger || ((...args: unknown[]) => console.log(new Date().toISOString(), '[executor]', ...args))
 
-  // 1. 检查今日配额
+  // 1. 优先发草稿：发布到期草稿后，当日已发布口径（含草稿发布）自然增大，剩余由生成补足
+  if (config.publishDueDrafts) {
+    try {
+      const published = await config.publishDueDrafts()
+      if (published > 0) log(`优先发布到期草稿 ${published} 篇`)
+    } catch (e: any) {
+      log(`[warn] 发布到期草稿失败：${e.message}`)
+    }
+  }
+
+  // 2. 检查今日配额（已发布含草稿发布；不足部分为剩余目标）
+  let done = 0
   if (config.getPublishedToday) {
-    const done = await config.getPublishedToday()
+    done = await config.getPublishedToday()
     if (done >= dailyTarget) {
       log(`当天已发布 ${done}/${dailyTarget} 篇，跳过`)
       return { mode: 'skipped', reason: `当天已发布 ${done} 篇` }
     }
-    log(`当天已发布 ${done}/${dailyTarget} 篇，继续`)
+    log(`当天已发布 ${done}/${dailyTarget} 篇，剩余 ${dailyTarget - done} 篇由生成补足`)
   }
 
   // 2. 防重复发布：今天已有本地成功记录 → 信任本地，跳过
@@ -270,9 +120,11 @@ export async function execute(db: PipelineDB, config: ExecutorConfig = {}): Prom
   }
 
   // 3. 检查本地网关（已提供云端 client 时跳过，Workers/线上环境无本地网关）
-  let probe: LocalGatewayProbe | null = config.ai?.client
+  //    惰性加载 local-gateway：纯云端站（config.ai.client 已提供）不 require，零开销
+  const lg: typeof import('./local-gateway.js') | null = config.ai?.client
     ? null
-    : await probeLocalGateway(localGateway)
+    : require('./local-gateway.js')
+  let probe: LocalGatewayProbe | null = lg ? await lg.probeLocalGateway(localGateway) : null
   let localOnline = probe ? probe.online : false
 
   // 3.1 自愈：离线/degraded → 拉起（网关或浏览器）→ 等待 → 重探测一次
@@ -280,7 +132,7 @@ export async function execute(db: PipelineDB, config: ExecutorConfig = {}): Prom
     if (probe.degraded) {
       log('本地网关 degraded（浏览器未连接），尝试拉起浏览器')
       if (config.localChromeStartCommand) {
-        await runCommand(config.localChromeStartCommand, log)
+        await lg!.runCommand(config.localChromeStartCommand, log)
         await sleep(autoStartWaitMs)
       } else {
         log('未配置 localChromeStartCommand，跳过浏览器拉起')
@@ -288,13 +140,13 @@ export async function execute(db: PipelineDB, config: ExecutorConfig = {}): Prom
     } else {
       log('本地 AI 网关离线，尝试自愈拉起')
       if (config.localGatewayStartCommand) {
-        await runCommand(config.localGatewayStartCommand, log)
+        await lg!.runCommand(config.localGatewayStartCommand, log)
         await sleep(autoStartWaitMs)
       } else {
         log('未配置 localGatewayStartCommand，跳过拉起')
       }
     }
-    probe = await probeLocalGateway(localGateway)
+    probe = await lg!.probeLocalGateway(localGateway)
     localOnline = probe.online
   }
 
@@ -323,10 +175,11 @@ export async function execute(db: PipelineDB, config: ExecutorConfig = {}): Prom
     log(config.ai?.client ? '已配置云端 AI client，直接走云端' : '本地 AI 网关离线，尝试云端兜底')
   }
 
-  // 4. 创建管线
+  // 4. 创建管线（目标 = 剩余待生成数：今日已发布 1 篇则补 2 篇，到目标即止）
+  const remain = Math.max(0, dailyTarget - done)
   const pipelineConfig: PipelineConfig = {
     ...config,
-    target: dailyTarget,
+    target: remain,
   }
 
   if (localOnline) {
@@ -342,7 +195,7 @@ export async function execute(db: PipelineDB, config: ExecutorConfig = {}): Prom
     log(`使用本地网关 ${localGateway}，模型候选 ${localModels.join(' -> ')}`)
     pipelineConfig.ai = {
       ...pipelineConfig.ai,
-      client: createLocalGatewayClient({ gateway: localGateway, models: localModels, timeoutMs: localTimeoutMs, logger: log }),
+      client: lg!.createLocalGatewayClient({ gateway: localGateway, models: localModels, timeoutMs: localTimeoutMs, logger: log }),
       model: localModels[0],
     }
   } else {
@@ -359,7 +212,7 @@ export async function execute(db: PipelineDB, config: ExecutorConfig = {}): Prom
   try {
     const lockFile = localOnline ? config.localLockFile : undefined
     if (lockFile) {
-      const got = await acquireLock(
+      const got = await lg!.acquireLock(
         lockFile,
         config.localLockWaitMs ?? 180_000,
         config.localLockStaleMs ?? 1_800_000,
@@ -391,7 +244,7 @@ export async function execute(db: PipelineDB, config: ExecutorConfig = {}): Prom
 
       return { mode: localOnline ? 'local' : 'cloud', pipeline: result }
     } finally {
-      if (lockFile) releaseLock(lockFile)
+      if (lockFile) lg!.releaseLock(lockFile)
     }
   } catch (e: any) {
     log('执行失败:', e.message)

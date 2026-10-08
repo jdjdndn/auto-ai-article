@@ -18,6 +18,7 @@ exports.renderArticleBlocks = renderArticleBlocks;
 exports.renderArticleCta = renderArticleCta;
 exports.renderArticleLinks = renderArticleLinks;
 exports.renderFaqSection = renderFaqSection;
+exports.renderRelatedArticles = renderRelatedArticles;
 exports.renderShareBar = renderShareBar;
 exports.articleJsonLd = articleJsonLd;
 exports.organizationJsonLd = organizationJsonLd;
@@ -29,6 +30,7 @@ exports.flattenFaq = flattenFaq;
 exports.flattenLinks = flattenLinks;
 exports.safeArticle = safeArticle;
 exports.initArticleActions = initArticleActions;
+exports.cnTodayStartISO = cnTodayStartISO;
 // —— JSON 提取（容忍 markdown 代码块包裹 / 前后多余文字）——
 /** 从候选字段中取第一个非空字符串（空串不能短路，否则会丢掉后面的真实内容） */
 function firstNonEmpty(...vals) {
@@ -440,6 +442,13 @@ exports.articleCss = `
 .article-faq summary { cursor: pointer; font-weight: 600; padding: 8px 2px; }
 .article-faq details p { color: var(--text-muted, #64748b); margin: 2px 0 10px 18px; font-size: 14px; }
 
+/* 相关文章 */
+.article-related { margin: 22px 0; padding: 20px 24px; background: var(--card-bg, #fff); border: 1px solid var(--border, #e5e7eb); border-radius: 10px; }
+.article-related .rel-title { font-size: 17px; font-weight: 600; margin-bottom: 12px; }
+.article-related .rel-list { display: flex; flex-direction: column; gap: 8px; }
+.article-related .rel-link { color: var(--primary, #2563eb); font-size: 14px; line-height: 1.5; text-decoration: none; }
+.article-related .rel-link:hover { text-decoration: underline; }
+
 /* 分享栏 */
 .share-bar { display: flex; gap: 12px; justify-content: center; margin: 20px 0; }
 .share-bar .share-btn { padding: 8px 20px; background: #fff; border: 1px solid var(--primary, #2563eb); color: var(--primary, #2563eb); border-radius: 10px; cursor: pointer; font-size: 13px; }
@@ -610,7 +619,19 @@ function renderFaqSection(faq, opts = {}) {
     html += `</section>`;
     return html;
 }
-/** 分享/收藏/纠错按钮栏 */
+/** 相关文章（related 列表渲染；数据由 computeRelatedArticles 计算或 API related_ids 提供） */
+function renderRelatedArticles(related, opts = {}) {
+    if (!Array.isArray(related) || !related.length)
+        return '';
+    const title = opts.title || '相关文章';
+    const items = related
+        .filter((r) => r?.id && r?.title)
+        .map((r) => `<a class="rel-link" href="/article/${encodeURIComponent(r.id)}">${escapeHtml(r.title)}</a>`)
+        .join('');
+    if (!items)
+        return '';
+    return `<section class="article-related"><h2 class="rel-title">${escapeHtml(title)}</h2><div class="rel-list">${items}</div></section>`;
+}
 function renderShareBar(article, opts = {}) {
     const url = opts.shareUrl || '';
     return `<div class="share-bar">
@@ -793,4 +814,17 @@ function initArticleActions(root = document, opts = {}) {
                 opts.onTrackClick(t.getAttribute('data-track-click') || '');
         });
     }
+}
+// —— 时区 ——
+/**
+ * 北京时间"今天"0 点对应的 UTC ISO 字符串。
+ * 统一"今日已发布/今日创建"的日界口径：北京 2026-10-08 00:00 = UTC 2026-10-07T16:00:00.000Z。
+ * 所有站点防重（getPublishedToday / publishedTodayCount / hasLocalRunToday）共用，避免
+ * 直接用北京日期前缀（'YYYY-MM-DD' 字符串比较）漏掉 UTC 昨天但北京今天 8 点前发布的文章。
+ */
+function cnTodayStartISO() {
+    const now = new Date();
+    const cnDate = new Date(now.getTime() + 8 * 3600e3).toISOString().slice(0, 10); // 北京今天日期
+    const [y, m, d] = cnDate.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d) - 8 * 3600e3).toISOString();
 }

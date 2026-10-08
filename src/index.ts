@@ -33,7 +33,7 @@ export { articles, seeds, runLogs } from './schema.js'
 export type { ArticleRow, SeedRow, RunLogRow } from './schema.js'
 
 // 工具函数
-export { extractJson, safeJson, normalizeJson, firstImageOf, firstNonEmpty, asAnyArray, normalizeContentBlocks, escapeHtml, renderArticleBlocks, renderArticleCta, generateToc, readingTime, articleCss, renderArticleLinks, renderFaqSection, renderShareBar, flattenToStrings, flattenFaq, flattenLinks, safeArticle } from './utils.js'
+export { extractJson, safeJson, normalizeJson, firstImageOf, firstNonEmpty, asAnyArray, normalizeContentBlocks, escapeHtml, renderArticleBlocks, renderArticleCta, generateToc, readingTime, articleCss, renderArticleLinks, renderRelatedArticles, renderFaqSection, renderShareBar, flattenToStrings, flattenFaq, flattenLinks, safeArticle, cnTodayStartISO } from './utils.js'
 
 // 素材采集
 export { fetchRssFeed, extractArticleText, textSimilarity, normalizeText } from './sources.js'
@@ -49,6 +49,14 @@ export type { Pipeline, PipelineDB } from './pipeline.js'
 // 执行器
 export { execute } from './executor.js'
 export type { ExecutorConfig, ExecutorResult } from './executor.js'
+
+// 统一调度入口（本地发文 / 线上发文 / 线上兜底触发式一体封装）
+export { runScheduledGenerate } from './runner.js'
+export type { SiteRunnerConfig, SiteRunnerResult } from './runner.js'
+
+// 相关文章计算（相似 + 互补混合评分，公共能力）
+export { computeRelatedArticles } from './related.js'
+export type { RelatedCandidate, RelatedOptions } from './related.js'
 
 // 定时调度器（Cloudflare Durable Objects Alarms）
 export { ArticleScheduler, startScheduler, getNextAlarmTime, initDoAlarm, rescheduleDoAlarm, applyWorkerEnv, createDailyAlarmPlugin, createScheduledPlugin } from './scheduler.js'

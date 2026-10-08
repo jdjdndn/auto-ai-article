@@ -3,6 +3,7 @@
  * 同步 dist/ 到所有消费项目的 vendor/ 目录
  *
  * 用法：cd auto-ai-article && npm run build && node sync-vendor.cjs
+ *      node sync-vendor.cjs --exclude=local-gateway.js,local-gateway.d.ts  # 排除指定产物（纯云端站瘦身）
  *
  * 原理：各站点是独立 git 仓库，Cloudflare Pages CI 无法访问 file:../../ 路径。
  * 因此将库 dist 以 vendor 形式提交到各仓库；本脚本保证 vendor 与源码同步。
@@ -12,6 +13,8 @@ const path = require('path')
 
 const SRC = path.join(__dirname, 'dist')
 const ROOT = path.resolve(__dirname, '..')
+const EXCLUDE_ARG = process.argv.find((a) => a.startsWith('--exclude='))
+const EXCLUDE = EXCLUDE_ARG ? EXCLUDE_ARG.split('=')[1].split(',').map((s) => s.trim()) : []
 
 // 消费项目列表：[项目路径, vendor 相对路径]
 const TARGETS = [
@@ -54,6 +57,7 @@ if (!fs.existsSync(SRC)) {
   process.exit(1)
 }
 
+if (EXCLUDE.length) console.log(`⏭  排除产物: ${EXCLUDE.join(', ')}`)
 let ok = 0
 let fail = 0
 
@@ -72,8 +76,9 @@ for (const [proj, vendorRel] of TARGETS) {
     fs.rmSync(vendorDir, { recursive: true, force: true })
     fs.mkdirSync(distDir, { recursive: true })
 
-    // 复制 dist/*
+    // 复制 dist/*（跳过 --exclude 指定的文件）
     for (const f of fs.readdirSync(SRC)) {
+      if (EXCLUDE.includes(f)) continue
       fs.copyFileSync(path.join(SRC, f), path.join(distDir, f))
     }
 

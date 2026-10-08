@@ -1,8 +1,16 @@
 import type { PipelineConfig, PipelineRunResult, RunLogInput } from './types.js';
 import { type PipelineDB } from './pipeline.js';
+import type { LocalGatewayProbe } from './local-gateway.js';
+export type { LocalGatewayProbe };
 export interface ExecutorConfig extends PipelineConfig {
     /** 每日目标发布篇数（默认 3） */
     dailyTarget?: number;
+    /**
+     * 生成前先发布到期草稿（"优先发草稿"：先发布 publishAt 已到期的 draft，返回本次发布数）。
+     * 在当日防重统计之前调用，发布数计入 getPublishedToday 的"今日已发布"口径，
+     * 剩余目标（dailyTarget - 已发布）由生成补足。缺省不启用（行为不变）。
+     */
+    publishDueDrafts?: () => Promise<number>;
     /** 本地 AI 网关地址（默认 http://localhost:3456/v1） */
     localGateway?: string;
     /** 本地 AI 模型名称（默认 deepseek-chat） */
@@ -60,15 +68,5 @@ export interface ExecutorResult {
     mode: 'local' | 'cloud' | 'cloud-fallback' | 'skipped';
     reason?: string;
     pipeline?: PipelineRunResult;
-}
-export interface LocalGatewayProbe {
-    /** 网关可用（可发 AI 请求） */
-    online: boolean;
-    /** token-free-gateway degraded（status:"degraded"，browser disconnected） */
-    degraded: boolean;
-    /** 会话过期（status:"session_expired"）或 /v1/models 返回空列表（未授权） */
-    sessionExpired: boolean;
-    /** 可用模型列表（可能为空） */
-    models: string[];
 }
 export declare function execute(db: PipelineDB, config?: ExecutorConfig): Promise<ExecutorResult>;

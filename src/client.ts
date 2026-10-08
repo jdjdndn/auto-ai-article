@@ -13,6 +13,7 @@ export {
   firstImageOf,
   normalizeContentBlocks,
   renderArticleLinks,
+  renderRelatedArticles,
   renderFaqSection,
   renderShareBar,
   articleJsonLd,
