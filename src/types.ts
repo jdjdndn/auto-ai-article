@@ -41,6 +41,8 @@ export interface GeneratedArticle {
   faq: FaqItem[]
   links: LinkItem[]
   expiresAt?: string | null
+  /** 计划发布时间（publishMode='seed' 时由素材透传） */
+  publishAt?: string | null
   /** 管线设置：安全检查命中时自动降级为 'draft' */
   status?: 'draft' | 'published'
 }
@@ -179,6 +181,8 @@ export interface PipelineConfig {
   safetyAction?: 'draft' | 'replace'
   /** AI 选题失败重试次数（默认 1，即最多尝试 2 次） */
   suggestRetries?: number
+  /** 单篇生成失败（含 AI 返回内容不合格）重试次数（默认 1，即最多尝试 2 次） */
+  generateRetries?: number
   /** 并发生成篇数（默认 3） */
   concurrency?: number
   /**
@@ -187,6 +191,13 @@ export interface PipelineConfig {
    * 示例：article-site 传 shared/ai-prompts.mjs 的 applyLinkPool。
    */
   resolveLinks?: (article: GeneratedArticle) => GeneratedArticle
+  /**
+   * 文章发布模式（默认 'draft'，保持 schema 默认值，不改变既有行为）
+   * - 'draft'：不设置 status，文章落库为 draft（默认）
+   * - 'published'：文章直接 published
+   * - 'seed'：按素材 publishAt 决定（有 publishAt → draft 定时发布；无 → published 立即发布）
+   */
+  publishMode?: 'draft' | 'published' | 'seed'
 }
 
 // —— 管线运行结果 ——

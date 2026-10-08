@@ -1,6 +1,13 @@
 import type { Seed, SeedInput, GeneratedArticle, InsertResult, PipelineConfig, PipelineRunResult, TopicSuggestion, RunLogInput } from './types.js';
 /** 可注入的 sleep 函数（Workers alarm 里需用 ctx.waitUntil） */
 export type SleepFn = (ms: number) => Promise<void>;
+/**
+ * 通用重试工具（公共导出，本地/云端 AI client 复用）：
+ * - fn(attempt)：第 attempt 次尝试（0 起），可用于模型轮换
+ * - retries：额外重试次数（总尝试 retries+1）
+ * - delaysMs：各次重试前的等待间隔；缺省 1s×(i+1) 递增（保持旧行为）
+ */
+export declare function withRetry<T>(fn: (attempt: number) => Promise<T>, retries: number, label: string, sleep?: SleepFn, delaysMs?: number[]): Promise<T>;
 export interface Pipeline {
     /** AI 自动选题（返回选题列表，不入库） */
     suggestTopics(): Promise<TopicSuggestion[]>;

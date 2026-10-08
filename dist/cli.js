@@ -29,8 +29,14 @@ function usage() {
 选项：
   --gateway=<url>       本地 AI 网关地址（默认 http://localhost:3456/v1）
   --model=<name>        本地 AI 模型（默认 deepseek-chat）
+  --local-models=<a,b>  本地候选模型（逗号分隔，按优先级轮换；模型不可用时自动切换）
+  --local-lock-file=<path>  本地发文互斥锁路径（多站同机共用网关时配置同一路径；后到站等待，超时本轮跳过）
   --cloud-model=<name>  云端 AI 模型
   --target=<n>          每日目标篇数（默认 3）
+  --local-timeout=<ms>  本地 AI 单次请求超时毫秒（默认 280000，对齐 TFG requestTimeoutSec）
+  --gateway-start-cmd=<cmd>  本地网关离线时自愈拉起命令（如 powershell -File auto-start.ps1）
+  --gateway-chrome-start-cmd=<cmd>  网关 degraded 时拉起浏览器命令（如 token-free-gateway chrome start）
+  --cloud-fallback-url=<url>  本地离线且无云端 key 时整轮转的线上兜底 API（POST，body {dryRun}）
   --api-key=<key>       AI API Key（云端模式）
   --api-base=<url>      AI API 地址（默认 https://api.openai.com/v1）
   --ai-model=<name>     云端 AI 模型名称（默认 gpt-4o-mini）
@@ -42,6 +48,7 @@ function usage() {
   ai-article-pipeline --dry-run
   ai-article-pipeline --gateway=http://localhost:3456/v1 --model=kimi
   ai-article-pipeline --api-key=sk-xxx --ai-model=gpt-4o-mini
+  ai-article-pipeline --gateway-start-cmd="powershell -NoProfile -ExecutionPolicy Bypass -File E:\\code\\auto-ai-article\\third_party\\token-free-gateway\\auto-start.ps1"
 `);
 }
 // —— 简易内存 DB（CLI 演示用，实际使用需替换）——
@@ -104,7 +111,12 @@ async function main() {
         dailyTarget: parseInt(String(args.target || '3'), 10),
         localGateway: String(args.gateway || 'http://localhost:3456/v1'),
         localModel: String(args.model || 'deepseek-chat'),
+        localModels: args['local-models'] ? String(args['local-models']).split(',').map((s) => s.trim()).filter(Boolean) : undefined,
+        localLockFile: args['local-lock-file'] ? String(args['local-lock-file']) : undefined,
         cloudModel: String(args['cloud-model'] || ''),
+        localTimeoutMs: parseInt(String(args['local-timeout'] || '280000'), 10),
+        localGatewayStartCommand: args['gateway-start-cmd'] ? String(args['gateway-start-cmd']) : undefined,
+        localChromeStartCommand: args['gateway-chrome-start-cmd'] ? String(args['gateway-chrome-start-cmd']) : undefined,
         ai: {
             apiKey: String(args['api-key'] || ''),
             baseUrl: String(args['api-base'] || 'https://api.openai.com/v1'),
@@ -114,6 +126,23 @@ async function main() {
                 : undefined,
         },
     };
+    if (args['cloud-fallback-url']) {
+        const url = String(args['cloud-fallback-url']);
+        config.cloudFallback = async (ctx) => {
+            console.log(`离线，整轮转云端兜底: ${url}`);
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ dryRun: ctx.dryRun }),
+            });
+            if (!res.ok) {
+                const text = await res.text().catch(() => '');
+                return { ok: false, message: `云端兜底 HTTP ${res.status} ${text.slice(0, 120)}` };
+            }
+            const data = await res.json().catch(() => null);
+            return { ok: true, message: data?.message || '云端兜底已执行' };
+        };
+    }
     const db = createDemoDB();
     console.log('=== ai-article-pipeline CLI ===');
     console.log(`模式: ${config.dryRun ? 'dry-run' : 'normal'}`);

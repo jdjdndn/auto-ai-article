@@ -67,15 +67,21 @@ export type SleepFn = (ms: number) => Promise<void>
 
 const defaultSleep: SleepFn = (ms) => new Promise((r) => setTimeout(r, ms))
 
-async function withRetry<T>(fn: () => Promise<T>, retries: number, label: string, sleep: SleepFn = defaultSleep): Promise<T> {
+/**
+ * 通用重试工具（公共导出，本地/云端 AI client 复用）：
+ * - fn(attempt)：第 attempt 次尝试（0 起），可用于模型轮换
+ * - retries：额外重试次数（总尝试 retries+1）
+ * - delaysMs：各次重试前的等待间隔；缺省 1s×(i+1) 递增（保持旧行为）
+ */
+export async function withRetry<T>(fn: (attempt: number) => Promise<T>, retries: number, label: string, sleep: SleepFn = defaultSleep, delaysMs?: number[]): Promise<T> {
   let lastErr: Error | undefined
   for (let i = 0; i <= retries; i++) {
     try {
-      return await fn()
+      return await fn(i)
     } catch (e: any) {
       lastErr = e
       if (i < retries) {
-        await sleep(1000 * (i + 1))
+        await sleep(delaysMs ? delaysMs[i] : 1000 * (i + 1))
       }
     }
   }
@@ -158,7 +164,9 @@ export function createPipeline(db: PipelineDB, config: PipelineConfig = {}): Pip
   const sanitizeUrls = config.sanitizeUrls ?? true
   const safetyAction = config.safetyAction ?? 'replace'
   const suggestRetries = config.suggestRetries ?? 1
+  const generateRetries = config.generateRetries ?? 1
   const concurrency = config.concurrency ?? 3
+  const publishMode = config.publishMode ?? 'draft'
 
   // —— AI 选题（带重试）——
 
@@ -190,53 +198,66 @@ export function createPipeline(db: PipelineDB, config: PipelineConfig = {}): Pip
 
   async function generateArticle(
     raw: string,
-    opts: { category?: string; template?: string } = {},
+    opts: { category?: string; template?: string; publishAt?: string | null } = {},
   ): Promise<GeneratedArticle> {
     if (!raw || raw.length < 8) throw new Error('素材过短（至少 8 字符）')
 
-    const text = await aiClient([
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: `原始信息：\n${JSON.stringify(raw)}` },
-    ])
-    const a = extractJson(text) as any
-    if (!a) throw new Error('AI 返回无法解析为 JSON')
+    // 生成重试：TFG 等浏览器网关在会话不稳定窗口会返回 HTTP 200 但内容不合格（非 JSON/缺字段/过短），
+    // 与网络错误一样需要重试；重试间隔放大（8s/16s…）以覆盖浏览器会话恢复时间
+    return withRetry(async () => {
+      const text = await aiClient([
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `原始信息：\n${JSON.stringify(raw)}` },
+      ])
+      const a = extractJson(text) as any
+      if (!a) throw new Error('AI 返回无法解析为 JSON')
 
-    const item: GeneratedArticle = {
-      title: String(a.title || '').trim(),
-      summary: String(a.summary || ''),
-      content: normalizeContentBlocks(a.content),
-      template: (['deal', 'guide', 'faq', 'default'].includes(a.template)
-        ? a.template
-        : (opts.template && opts.template !== 'auto' ? opts.template : 'deal')) as GeneratedArticle['template'],
-      category: opts.category && opts.category !== 'auto' ? opts.category : (a.category || '优惠'),
-      tags: Array.isArray(a.tags) ? a.tags : [],
-      faq: Array.isArray(a.faq) ? a.faq : [],
-      links: Array.isArray(a.links) ? a.links : [],
-      expiresAt: a.expiresAt || null,
-    }
+      const item: GeneratedArticle = {
+        title: String(a.title || '').trim(),
+        summary: String(a.summary || ''),
+        content: normalizeContentBlocks(a.content),
+        template: (['deal', 'guide', 'faq', 'default'].includes(a.template)
+          ? a.template
+          : (opts.template && opts.template !== 'auto' ? opts.template : 'deal')) as GeneratedArticle['template'],
+        category: opts.category && opts.category !== 'auto' ? opts.category : (a.category || '优惠'),
+        tags: Array.isArray(a.tags) ? a.tags : [],
+        faq: Array.isArray(a.faq) ? a.faq : [],
+        links: Array.isArray(a.links) ? a.links : [],
+        expiresAt: a.expiresAt || null,
+      }
 
-    if (!item.title || !item.content.length) throw new Error('AI 结果缺 title/content')
+      if (!item.title || !item.content.length) throw new Error('AI 结果缺 title/content')
 
-    // 内容充实度兜底
-    const contentChars = JSON.stringify(item.content).length
-    if (item.content.length < 3 || contentChars < 250) {
-      throw new Error(`AI 内容过短（${item.content.length} 块 / ${contentChars} 字），请重试`)
-    }
+      // 发布模式：draft（默认，不设置 status）/ published / seed（按素材 publishAt 决定）
+      if (publishMode === 'seed') {
+        item.publishAt = opts.publishAt ?? null
+        item.status = opts.publishAt ? 'draft' : 'published'
+      } else if (publishMode === 'published') {
+        item.publishAt = opts.publishAt ?? null
+        item.status = 'published'
+      }
 
-    // 链接池解析钩子（站点特有：如 article-site 的 applyLinkPool）— 须在 URL 清洗之前，
-    // 先把 AI 输出的 ref/linkId 解析成链接池真实 URL，再由 sanitize 兜底清占位/非法链接
-    let resolved: GeneratedArticle = item
-    if (config.resolveLinks) {
-      resolved = config.resolveLinks(item)
-    }
+      // 内容充实度兜底
+      const contentChars = JSON.stringify(item.content).length
+      if (item.content.length < 3 || contentChars < 250) {
+        throw new Error(`AI 内容过短（${item.content.length} 块 / ${contentChars} 字），请重试`)
+      }
 
-    // URL 清洗
-    if (sanitizeUrls) {
-      resolved.links = sanitizeLinks(resolved.links)
-      resolved.content = sanitizeBlocks(resolved.content)
-    }
+      // 链接池解析钩子（站点特有：如 article-site 的 applyLinkPool）— 须在 URL 清洗之前，
+      // 先把 AI 输出的 ref/linkId 解析成链接池真实 URL，再由 sanitize 兜底清占位/非法链接
+      let resolved: GeneratedArticle = item
+      if (config.resolveLinks) {
+        resolved = config.resolveLinks(item)
+      }
 
-    return resolved
+      // URL 清洗
+      if (sanitizeUrls) {
+        resolved.links = sanitizeLinks(resolved.links)
+        resolved.content = sanitizeBlocks(resolved.content)
+      }
+
+      return resolved
+    }, generateRetries, 'AI 生成', (ms) => new Promise((r) => setTimeout(r, ms * 8)))
   }
 
   // —— 内容安全处理 ——
@@ -340,6 +361,7 @@ export function createPipeline(db: PipelineDB, config: PipelineConfig = {}): Pip
       const article = await generateArticle(raw, {
         category: s.category,
         template: s.template,
+        publishAt: s.publishAt ?? null,
       })
 
       // 内容安全处理

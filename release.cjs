@@ -65,10 +65,14 @@ const t0all = Date.now();
 // ---------- 日志落盘（tee console 输出到 release-log/<时间戳>.log） ----------
 const LOG_DIR = path.join(LIB_DIR, 'release-log');
 fs.mkdirSync(LOG_DIR, { recursive: true });
-const LOG_FILE = path.join(LOG_DIR, new Date().toISOString().replace(/[:.]/g, '-') + '.log');
+const _now = new Date();
+const _p = (n) => String(n).padStart(2, '0');
+const LOG_FILE = path.join(LOG_DIR, `${_now.getFullYear()}-${_p(_now.getMonth() + 1)}-${_p(_now.getDate())}_${_p(_now.getHours())}-${_p(_now.getMinutes())}-${_p(_now.getSeconds())}.log`);
 const _origLog = console.log, _origErr = console.error;
 console.log = (...a) => { _origLog(...a); try { fs.appendFileSync(LOG_FILE, a.join(' ') + '\n'); } catch (e) {} };
 console.error = (...a) => { _origErr(...a); try { fs.appendFileSync(LOG_FILE, a.join(' ') + '\n'); } catch (e) {} };
+// 清理旧日志（保留最近 20 个）
+try { const _logs = fs.readdirSync(LOG_DIR).filter((f) => f.endsWith('.log')).map((f) => ({ f, t: fs.statSync(path.join(LOG_DIR, f)).mtimeMs })).sort((a, b) => b.t - a.t); for (const l of _logs.slice(20)) fs.unlinkSync(path.join(LOG_DIR, l.f)); } catch (e) {}
 console.log(`📝 日志: ${LOG_FILE}`);
 
 // 从 sync-vendor.cjs 读取 TARGETS，自动生成站点路径列表
@@ -87,6 +91,8 @@ function loadStations() {
 
 const STATIONS = loadStations();
 console.log(`自动加载 ${STATIONS.length} 个站点（来自 sync-vendor.cjs TARGETS）`);
+const _mode = [DRY_RUN && 'dry-run', RESUME && 'resume', FORCE && 'force', NO_PUSH && 'no-push', ONLY && `only=${ONLY.join(',')}`, CONC_EXPLICIT && `concurrency=${BUILD_CONC}`].filter(Boolean).join(' ') || '增量';
+console.log(`🚀 release 开始 | 模式: ${_mode}`);
 
 // ---------- 工具 ----------
 function sha256(p) { return crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex'); }
@@ -223,6 +229,7 @@ if (DRY_RUN) {
   console.log('\n🔍 --dry-run：仅打印计划，不执行 build/sync/push');
   if (buildTasks.length) for (const t of buildTasks) console.log(`  ▸ build ${t.name} ${t.why}`);
   console.log(`\n🎉 dry-run 完成（总耗时 ${fmt(Date.now() - t0all)}）`);
+  console.log(`📝 日志已保存: ${LOG_FILE}`);
   process.exit(0);
 }
 
@@ -269,7 +276,12 @@ console.log(`\n✅ build 通过：${buildResults.length} 站（跳过 ${skipped.
 // ---------- Step 4: commit + push ----------
 if (NO_PUSH) {
   console.log('\n[5/5] --no-push 模式，跳过 push');
+  if (buildResults.length) {
+    console.log('\n📊 build 耗时(降序 top5):');
+    [...buildResults].sort((a, b) => b.ms - a.ms).slice(0, 5).forEach((r) => console.log(`  ${fmt(r.ms).padStart(6)}  ${r.label.replace('build ', '')}`));
+  }
   console.log(`\n🎉 完成（总耗时 ${fmt(Date.now() - t0all)}）`);
+  console.log(`📝 日志已保存: ${LOG_FILE}`);
   process.exit(0);
 }
 
@@ -291,6 +303,18 @@ for (const s of STATIONS) {
 const pushResults = await runPool(pushTasks, PUSH_CONC);
 pushResults.forEach((r, i) => console.log(`  ${r.ok ? '✓' : '✗'} ${r.label} ${fmt(r.ms)} (${i + 1}/${pushResults.length})${r.ok ? '' : '  ' + (r.error || '')}`));
 
+// ---------- 汇总 ----------
+console.log('\n📊 汇总:');
+if (buildResults.length) {
+  const _sorted = [...buildResults].sort((a, b) => b.ms - a.ms);
+  console.log('  build 耗时(降序 top5):');
+  _sorted.slice(0, 5).forEach((r) => console.log(`    ${fmt(r.ms).padStart(6)}  ${r.label.replace('build ', '')}`));
+  if (_sorted.length > 5) console.log(`    ... 共 ${_sorted.length} 站`);
+}
+if (pushResults.length) {
+  const _ok = pushResults.filter((r) => r.ok).length;
+  console.log(`  push: ${_ok}/${pushResults.length} 成功`);
+}
 console.log(`\n🎉 全部完成（总耗时 ${fmt(Date.now() - t0all)}）`);
 console.log(`📝 日志已保存: ${LOG_FILE}`);
 }

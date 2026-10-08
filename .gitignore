@@ -3,3 +3,6 @@ data/
 # 本地发布状态（各站源码指纹，机器相关，勿提交）
 release-state.json
 release-log/
+
+# token-free-gateway fork：编译产物不入库（源码在 third_party/token-free-gateway/src，用 bun build 重建）
+third_party/token-free-gateway/token-free-gateway.exe
