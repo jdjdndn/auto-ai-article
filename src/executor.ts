@@ -8,6 +8,7 @@ import type { PipelineConfig, PipelineRunResult, RunLogInput } from './types.js'
 import { createPipeline, type PipelineDB } from './pipeline.js'
 import type { LocalGatewayProbe } from './local-gateway.js'
 import { aggregateStats, renderStatsMarkdown, type RunLogEntry } from './stats.js'
+import { checkAndAlert, type AlertConfig } from './alerting.js'
 export type { LocalGatewayProbe }
 
 // —— 执行器配置 ——
@@ -69,6 +70,8 @@ export interface ExecutorConfig extends PipelineConfig {
   reportRun?: (log: RunLogInput) => Promise<void>
   /** 获取历史运行日志（运行结束后聚合统计面板输出） */
   fetchRunLogs?: () => Promise<RunLogEntry[]>
+  /** 告警配置（运行结束后检查成功率，低于阈值时触发 webhook 通知） */
+  alert?: AlertConfig
 }
 
 export interface ExecutorResult {
@@ -251,15 +254,39 @@ export async function execute(db: PipelineDB, config: ExecutorConfig = {}): Prom
       }
 
       // 7. 统计面板（运行结束后聚合历史日志，结尾汇总关键指标）
+      let historicalRate: number | undefined
       if (config.fetchRunLogs) {
         try {
           const logs = await config.fetchRunLogs()
           if (logs.length) {
             const summary = aggregateStats(logs)
+            historicalRate = summary.successRate
             log(`\n${renderStatsMarkdown(summary)}`)
           }
         } catch (e: any) {
           log('[warn] 统计面板生成失败：', e.message)
+        }
+      }
+
+      // 8. 告警检查（成功率低于阈值时触发 webhook 通知）
+      if (config.alert) {
+        try {
+          const alertResult = await checkAndAlert(
+            {
+              ok: result.ok,
+              fail: result.fail,
+              total: result.total,
+              mode: localOnline ? 'local' : 'cloud',
+              errors: result.errors,
+              historicalSuccessRate: historicalRate,
+            },
+            config.alert,
+          )
+          if (alertResult.triggered) {
+            log(`[alert] ${alertResult.reason} — ${alertResult.message}`)
+          }
+        } catch (e: any) {
+          log('[warn] 告警检查失败：', e.message)
         }
       }
 

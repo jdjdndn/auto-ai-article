@@ -35,3 +35,13 @@ export interface StatSummary {
 }
 export declare function aggregateStats(logs: RunLogEntry[]): StatSummary;
 export declare function renderStatsMarkdown(summary: StatSummary): string;
+/**
+ * 将 RunLogInput（管线运行日志）转换为 RunLogEntry（统计聚合输入）。
+ * 缺失字段以合理默认值填充。
+ */
+export declare function fromRunLogInput(input: import('./types.js').RunLogInput, project?: string): RunLogEntry;
+/**
+ * 生成独立 HTML 运营面板（纯 HTML + 内联 CSS，无外部依赖）。
+ * 可直接写入 .html 文件用浏览器打开，或作为 HTTP 响应体返回。
+ */
+export declare function renderStatsHtml(summary: StatSummary, title?: string): string;

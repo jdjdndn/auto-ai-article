@@ -121,7 +121,7 @@ export {
   getQuotaExhaustedModels,
   extractResponse,
 } from './ai-fallback.js'
-export type { AiModel, FallbackConfig, FallbackResult, FallbackReason, UnifiedAiConfig } from './ai-fallback.js'
+export type { AiModel, FallbackConfig, FallbackResult, FallbackReason, UnifiedAiConfig, BindingFallbackConfig, BadModelStore } from './ai-fallback.js'
 
 // AI 配置唯一事实源（模型链 / 备用提供方 / 站点默认模型）
 export { FALLBACK_PROVIDERS, SITE_DEFAULT_MODELS, getSiteDefaultModel } from './ai-config.js'
@@ -136,5 +136,9 @@ export { fetchSearchConsoleTerms, injectSearchTerms } from './search-terms.js'
 export type { SearchTerm, SearchTermsOptions } from './search-terms.js'
 
 // 生成统计聚合（成功率/失败分布/平台稳定性/每日趋势）
-export { aggregateStats, renderStatsMarkdown } from './stats.js'
+export { aggregateStats, renderStatsMarkdown, renderStatsHtml, fromRunLogInput } from './stats.js'
 export type { RunLogEntry, StatSummary } from './stats.js'
+
+// 告警（成功率低于阈值时触发 webhook 通知，支持飞书/钉钉/通用）
+export { checkAndAlert } from './alerting.js'
+export type { AlertConfig, AlertContext, AlertResult } from './alerting.js'

@@ -8,6 +8,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.execute = execute;
 const pipeline_js_1 = require("./pipeline.js");
 const stats_js_1 = require("./stats.js");
+const alerting_js_1 = require("./alerting.js");
 // —— 工具 ——
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // —— 执行器 ——
@@ -170,16 +171,37 @@ async function execute(db, config = {}) {
                 }
             }
             // 7. 统计面板（运行结束后聚合历史日志，结尾汇总关键指标）
+            let historicalRate;
             if (config.fetchRunLogs) {
                 try {
                     const logs = await config.fetchRunLogs();
                     if (logs.length) {
                         const summary = (0, stats_js_1.aggregateStats)(logs);
+                        historicalRate = summary.successRate;
                         log(`\n${(0, stats_js_1.renderStatsMarkdown)(summary)}`);
                     }
                 }
                 catch (e) {
                     log('[warn] 统计面板生成失败：', e.message);
+                }
+            }
+            // 8. 告警检查（成功率低于阈值时触发 webhook 通知）
+            if (config.alert) {
+                try {
+                    const alertResult = await (0, alerting_js_1.checkAndAlert)({
+                        ok: result.ok,
+                        fail: result.fail,
+                        total: result.total,
+                        mode: localOnline ? 'local' : 'cloud',
+                        errors: result.errors,
+                        historicalSuccessRate: historicalRate,
+                    }, config.alert);
+                    if (alertResult.triggered) {
+                        log(`[alert] ${alertResult.reason} — ${alertResult.message}`);
+                    }
+                }
+                catch (e) {
+                    log('[warn] 告警检查失败：', e.message);
                 }
             }
             return { mode: localOnline ? 'local' : 'cloud', pipeline: result };

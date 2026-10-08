@@ -6,6 +6,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.aggregateStats = aggregateStats;
 exports.renderStatsMarkdown = renderStatsMarkdown;
+exports.fromRunLogInput = fromRunLogInput;
+exports.renderStatsHtml = renderStatsHtml;
 function aggregateStats(logs) {
     const totalRuns = logs.length;
     const successes = logs.filter((l) => l.success);
@@ -85,4 +87,140 @@ function renderStatsMarkdown(summary) {
     for (const d of summary.dailyTrend)
         md += `| ${d.date} | ${d.runs} | ${pct(d.successRate)} |\n`;
     return md;
+}
+/**
+ * 将 RunLogInput（管线运行日志）转换为 RunLogEntry（统计聚合输入）。
+ * 缺失字段以合理默认值填充。
+ */
+function fromRunLogInput(input, project = 'unknown') {
+    return {
+        project,
+        provider: input.model ?? 'unknown',
+        success: input.fail === 0 || (input.ok != null && input.ok > 0 && (input.fail ?? 0) === 0),
+        wordCount: input.total ?? 0,
+        durationMs: 0,
+        tokensUsed: undefined,
+        failReason: input.error ?? undefined,
+        timestamp: input.runAt ?? new Date().toISOString(),
+    };
+}
+/**
+ * 生成独立 HTML 运营面板（纯 HTML + 内联 CSS，无外部依赖）。
+ * 可直接写入 .html 文件用浏览器打开，或作为 HTTP 响应体返回。
+ */
+function renderStatsHtml(summary, title = 'AI 文章生成运营面板') {
+    const pct = (r) => `${(r * 100).toFixed(1)}%`;
+    const rateColor = (r) => (r >= 0.8 ? '#22c55e' : r >= 0.6 ? '#f59e0b' : '#ef4444');
+    const maxFail = Math.max(1, ...summary.failReasons.map((f) => f.count));
+    const maxDailyRuns = Math.max(1, ...summary.dailyTrend.map((d) => d.runs));
+    const failBars = summary.failReasons
+        .map((f) => `
+        <div class="bar-row">
+          <span class="bar-label">${escapeHtml(f.reason)}</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${(f.count / maxFail) * 100}%;background:#ef4444"></div></div>
+          <span class="bar-value">${f.count}</span>
+        </div>`)
+        .join('');
+    const providerRows = summary.providerStats
+        .map((p) => `
+        <tr>
+          <td>${escapeHtml(p.provider)}</td>
+          <td>${p.runs}</td>
+          <td style="color:${rateColor(p.successRate)}">${pct(p.successRate)}</td>
+          <td>${p.avgDurationMs}ms</td>
+          <td>${p.avgTokens}</td>
+        </tr>`)
+        .join('');
+    const projectRows = summary.projectStats
+        .map((p) => `
+        <tr>
+          <td>${escapeHtml(p.project)}</td>
+          <td>${p.runs}</td>
+          <td style="color:${rateColor(p.successRate)}">${pct(p.successRate)}</td>
+        </tr>`)
+        .join('');
+    const dailyBars = summary.dailyTrend
+        .map((d) => `
+        <div class="day-col" title="${d.date}: ${d.runs}次, ${pct(d.successRate)}">
+          <div class="day-bar" style="height:${(d.runs / maxDailyRuns) * 120}px;background:${rateColor(d.successRate)}"></div>
+          <span class="day-label">${d.date.slice(5)}</span>
+        </div>`)
+        .join('');
+    return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escapeHtml(title)}</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e293b;padding:24px}
+  h1{font-size:24px;margin-bottom:8px}
+  .updated{color:#64748b;font-size:13px;margin-bottom:24px}
+  .cards{display:flex;gap:16px;margin-bottom:32px;flex-wrap:wrap}
+  .card{background:#fff;border-radius:12px;padding:20px 28px;box-shadow:0 1px 3px rgba(0,0,0,.08);min-width:160px}
+  .card .label{font-size:13px;color:#64748b;margin-bottom:4px}
+  .card .value{font-size:32px;font-weight:700}
+  .section{background:#fff;border-radius:12px;padding:20px 24px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  .section h2{font-size:16px;margin-bottom:16px;color:#334155}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0}
+  th{color:#64748b;font-weight:600;font-size:13px}
+  .bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .bar-label{width:200px;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bar-track{flex:1;height:20px;background:#f1f5f9;border-radius:4px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:4px;transition:width .3s}
+  .bar-value{width:32px;text-align:right;font-size:13px;font-weight:600}
+  .trend-chart{display:flex;align-items:flex-end;gap:4px;height:160px;overflow-x:auto;padding-bottom:4px}
+  .day-col{display:flex;flex-direction:column;align-items:center;min-width:36px}
+  .day-bar{width:20px;border-radius:3px 3px 0 0;min-height:2px}
+  .day-label{font-size:10px;color:#94a3b8;margin-top:4px}
+</style>
+</head>
+<body>
+  <h1>${escapeHtml(title)}</h1>
+  <div class="updated">更新时间：${new Date().toLocaleString('zh-CN')}</div>
+
+  <div class="cards">
+    <div class="card"><div class="label">总运行</div><div class="value">${summary.totalRuns}</div></div>
+    <div class="card"><div class="label">成功率</div><div class="value" style="color:${rateColor(summary.successRate)}">${pct(summary.successRate)}</div></div>
+    <div class="card"><div class="label">失败原因数</div><div class="value">${summary.failReasons.length}</div></div>
+    <div class="card"><div class="label">平台数</div><div class="value">${summary.providerStats.length}</div></div>
+    <div class="card"><div class="label">项目数</div><div class="value">${summary.projectStats.length}</div></div>
+  </div>
+
+  <div class="section">
+    <h2>每日趋势</h2>
+    <div class="trend-chart">${dailyBars || '<p style="color:#94a3b8">无数据</p>'}</div>
+  </div>
+
+  <div class="section">
+    <h2>失败原因分布</h2>
+    ${failBars || '<p style="color:#94a3b8">无失败记录</p>'}
+  </div>
+
+  <div class="section">
+    <h2>平台稳定性</h2>
+    <table>
+      <thead><tr><th>平台</th><th>次数</th><th>成功率</th><th>平均耗时</th><th>平均Token</th></tr></thead>
+      <tbody>${providerRows || '<tr><td colspan="5" style="color:#94a3b8">无数据</td></tr>'}</tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>项目统计</h2>
+    <table>
+      <thead><tr><th>项目</th><th>次数</th><th>成功率</th></tr></thead>
+      <tbody>${projectRows || '<tr><td colspan="3" style="color:#94a3b8">无数据</td></tr>'}</tbody>
+    </table>
+  </div>
+</body>
+</html>`;
+}
+function escapeHtml(s) {
+    return s
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
 }

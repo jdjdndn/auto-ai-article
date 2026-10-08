@@ -17,15 +17,33 @@
     },
     "./ai-config": {
       "types": "./dist/ai-config.d.ts",
+      "import": "./dist/ai-config.js",
       "require": "./dist/ai-config.js"
     },
     "./ai-fallback": {
       "types": "./dist/ai-fallback.d.ts",
+      "import": "./dist/ai-fallback.js",
       "require": "./dist/ai-fallback.js"
     },
     "./local-gateway": {
       "types": "./dist/local-gateway.d.ts",
+      "import": "./dist/local-gateway.js",
       "require": "./dist/local-gateway.js"
+    },
+    "./article-quality": {
+      "types": "./dist/article-quality.d.ts",
+      "import": "./dist/article-quality.js",
+      "require": "./dist/article-quality.js"
+    },
+    "./search-terms": {
+      "types": "./dist/search-terms.d.ts",
+      "import": "./dist/search-terms.js",
+      "require": "./dist/search-terms.js"
+    },
+    "./stats": {
+      "types": "./dist/stats.d.ts",
+      "import": "./dist/stats.js",
+      "require": "./dist/stats.js"
     },
     "./package.json": "./package.json"
   },
@@ -50,6 +68,7 @@
     "format": "biome check --write src",
     "sync-vendor": "npm run build && node sync-vendor.cjs",
     "release": "node release.cjs",
+    "bench": "npm run build && node bench/benchmark.mjs",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -68,6 +87,10 @@
     "url": "https://github.com/jdjdndn/auto-ai-article/issues"
   },
   "license": "MIT",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@types/node": "^26.6.3",

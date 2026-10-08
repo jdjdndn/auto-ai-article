@@ -194,7 +194,8 @@ export function createPipeline(db: PipelineDB, config: PipelineConfig = {}): Pip
     })
   } else if (ai.openrouter || process.env.OPENROUTER_API_KEY) {
     const or = ai.openrouter
-    const orKey = or?.apiKey || process.env.OPENROUTER_API_KEY!
+    const orKey = or?.apiKey || process.env.OPENROUTER_API_KEY
+    if (!orKey) throw new Error('OpenRouter apiKey missing: set ai.openrouter.apiKey or OPENROUTER_API_KEY')
     const orModels = or?.models
     aiClient = createAiClient({
       openrouter: { apiKey: orKey, ...(orModels ? { models: orModels } : {}) },

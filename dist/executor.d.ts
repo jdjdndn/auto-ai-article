@@ -2,6 +2,7 @@ import type { PipelineConfig, PipelineRunResult, RunLogInput } from './types.js'
 import { type PipelineDB } from './pipeline.js';
 import type { LocalGatewayProbe } from './local-gateway.js';
 import { type RunLogEntry } from './stats.js';
+import { type AlertConfig } from './alerting.js';
 export type { LocalGatewayProbe };
 export interface ExecutorConfig extends PipelineConfig {
     /** 每日目标发布篇数（默认 3） */
@@ -64,6 +65,8 @@ export interface ExecutorConfig extends PipelineConfig {
     reportRun?: (log: RunLogInput) => Promise<void>;
     /** 获取历史运行日志（运行结束后聚合统计面板输出） */
     fetchRunLogs?: () => Promise<RunLogEntry[]>;
+    /** 告警配置（运行结束后检查成功率，低于阈值时触发 webhook 通知） */
+    alert?: AlertConfig;
 }
 export interface ExecutorResult {
     mode: 'local' | 'cloud' | 'cloud-fallback' | 'skipped';

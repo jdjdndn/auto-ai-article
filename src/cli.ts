@@ -2,16 +2,20 @@
 // ============================================================
 // CLI 入口 — 手动触发 AI 文章生成
 // 用法：npx ai-article-pipeline [options]
+//
+// 两种模式：
+//   1. 本地模式（默认）：用内存 DemoDB + 本地 AI 网关，适合 dry-run 测试
+//   2. 远程模式（--remote=<url>）：通过 HTTP API 触发远程站点生成，适合生产使用
 // ============================================================
 
 import {
   execute,
+  runScheduledGenerate,
   type ExecutorConfig,
   type PipelineDB,
   type Seed,
   type SeedInput,
-  type InsertResult,
-  type RunLogInput,
+  type AlertConfig,
 } from './index.js'
 
 // —— 参数解析 ——
@@ -36,29 +40,43 @@ function usage() {
   console.log(`
 用法：ai-article-pipeline [options]
 
+模式：
+  本地模式（默认）    用内存 DemoDB + 本地 AI 网关，适合 dry-run 测试
+  远程模式（--remote） 通过 HTTP API 触发远程站点生成，适合生产使用
+
 选项：
+  --remote=<url>        远程站点 API 基址（如 https://www.example.cc），启用远程模式
+  --site=<name>         站点标识（远程模式必填，如 172、hm）
+  --remote-key=<key>    远程站点 admin 密钥
+  --remote-key-file=<path>  admin 密钥文件路径（内容为 MANAGE_KEY=xxx）
   --gateway=<url>       本地 AI 网关地址（默认 http://localhost:3456/v1）
   --model=<name>        本地 AI 模型（默认 deepseek-chat）
   --local-models=<a,b>  本地候选模型（逗号分隔，按优先级轮换；模型不可用时自动切换）
-  --local-lock-file=<path>  本地发文互斥锁路径（多站同机共用网关时配置同一路径；后到站等待，超时本轮跳过）
+  --local-lock-file=<path>  本地发文互斥锁路径
   --cloud-model=<name>  云端 AI 模型
   --target=<n>          每日目标篇数（默认 3）
-  --local-timeout=<ms>  本地 AI 单次请求超时毫秒（默认 280000，对齐 TFG requestTimeoutSec）
-  --gateway-start-cmd=<cmd>  本地网关离线时自愈拉起命令（如 powershell -File auto-start.ps1）
-  --gateway-chrome-start-cmd=<cmd>  网关 degraded 时拉起浏览器命令（如 token-free-gateway chrome start）
-  --cloud-fallback-url=<url>  本地离线且无云端 key 时整轮转的线上兜底 API（POST，body {dryRun}）
+  --local-timeout=<ms>  本地 AI 单次请求超时毫秒（默认 280000）
+  --gateway-start-cmd=<cmd>  本地网关离线时自愈拉起命令
+  --gateway-chrome-start-cmd=<cmd>  网关 degraded 时拉起浏览器命令
+  --cloud-fallback-url=<url>  本地离线且无云端 key 时整轮转的线上兜底 API
   --api-key=<key>       AI API Key（云端模式）
   --api-base=<url>      AI API 地址（默认 https://api.openai.com/v1）
   --ai-model=<name>     云端 AI 模型名称（默认 gpt-4o-mini）
-  --openrouter-key=<key> OpenRouter 兜底 Key（CF 额度用尽自动切换免费模型链；或设 OPENROUTER_API_KEY 环境变量）
+  --openrouter-key=<key> OpenRouter 兜底 Key（或设 OPENROUTER_API_KEY 环境变量）
+  --alert-webhook=<url>  告警 webhook URL（飞书/钉钉/通用）
+  --alert-rate=<n>       告警阈值：成功率低于此值触发（默认 0.6）
   --dry-run             只生成不入库
   --help                显示帮助
 
 示例：
+  # 本地 dry-run 测试
   ai-article-pipeline --dry-run
-  ai-article-pipeline --gateway=http://localhost:3456/v1 --model=kimi
-  ai-article-pipeline --api-key=sk-xxx --ai-model=gpt-4o-mini
-  ai-article-pipeline --gateway-start-cmd="powershell -NoProfile -ExecutionPolicy Bypass -File E:\\code\\auto-ai-article\\third_party\\token-free-gateway\\auto-start.ps1"
+
+  # 远程触发站点生成
+  ai-article-pipeline --remote=https://www.example.cc --site=172 --remote-key=xxx
+
+  # 本地生成 + 告警
+  ai-article-pipeline --gateway=http://localhost:3456/v1 --alert-webhook=https://open.feishu.cn/open-apis/bot/v2/hook/xxx --alert-rate=0.6
 `)
 }
 
@@ -121,6 +139,52 @@ async function main() {
     process.exit(0)
   }
 
+  // —— 告警配置 ——
+  const alert: AlertConfig | undefined = args['alert-webhook']
+    ? {
+        webhookUrl: String(args['alert-webhook']),
+        minSuccessRate: parseFloat(String(args['alert-rate'] || '0.6')),
+      }
+    : undefined
+
+  // —— 远程模式：通过 HTTP API 触发远程站点生成 ——
+  if (args.remote) {
+    const site = String(args.site || '')
+    if (!site) {
+      console.error('远程模式需要 --site=<name>')
+      process.exit(1)
+    }
+    console.log('=== ai-article-pipeline CLI（远程模式）===')
+    console.log(`站点: ${site}`)
+    console.log(`远程: ${args.remote}`)
+    console.log()
+
+    try {
+      const result = await runScheduledGenerate({
+        site,
+        adminBase: String(args.remote),
+        adminKey: args['remote-key'] ? String(args['remote-key']) : undefined,
+        adminKeyFile: args['remote-key-file'] ? String(args['remote-key-file']) : undefined,
+        dailyTarget: Number.parseInt(String(args.target || '3'), 10),
+        dryRun: !!args.dryRun,
+        alert,
+      })
+      console.log()
+      console.log('=== 结果 ===')
+      console.log(`模式: ${result.mode}`)
+      if (result.reason) console.log(`原因: ${result.reason}`)
+      if (result.pipeline) {
+        console.log(`成功: ${result.pipeline.ok}`)
+        console.log(`失败: ${result.pipeline.fail}`)
+      }
+    } catch (e: any) {
+      console.error('执行失败:', e.message)
+      process.exit(1)
+    }
+    return
+  }
+
+  // —— 本地模式：内存 DemoDB + 本地 AI 网关 ——
   const config: ExecutorConfig = {
     dryRun: !!args.dryRun,
     dailyTarget: Number.parseInt(String(args.target || '3'), 10),
@@ -137,6 +201,7 @@ async function main() {
     localTimeoutMs: Number.parseInt(String(args['local-timeout'] || '280000'), 10),
     localGatewayStartCommand: args['gateway-start-cmd'] ? String(args['gateway-start-cmd']) : undefined,
     localChromeStartCommand: args['gateway-chrome-start-cmd'] ? String(args['gateway-chrome-start-cmd']) : undefined,
+    alert,
     ai: {
       apiKey: String(args['api-key'] || ''),
       baseUrl: String(args['api-base'] || 'https://api.openai.com/v1'),

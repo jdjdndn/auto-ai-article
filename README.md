@@ -19,6 +19,112 @@ AI 自动文章生成管线 — 从素材到发布的完整流程，支持任意
 
 ---
 
+## 架构
+
+```mermaid
+graph TB
+  subgraph 入口层
+    CLI[cli.ts<br/>CLI 手动触发]
+    Runner[runner.ts<br/>runScheduledGenerate]
+    Scheduler[scheduler.ts<br/>DO Alarms 定时]
+  end
+
+  subgraph 编排层
+    Executor[executor.ts<br/>每日生成流程编排]
+    Pipeline[pipeline.ts<br/>素材→选题→生成→安全→入库]
+  end
+
+  subgraph AI 层
+    AiFallback[ai-fallback.ts<br/>策略模式+责任链]
+    AiConfig[ai-config.ts<br/>模型配置 SSOT]
+    LocalGateway[local-gateway.ts<br/>本地网关+自愈+互斥锁]
+  end
+
+  subgraph 功能模块
+    Quality[article-quality.ts<br/>质量评分门控]
+    SearchTerms[search-terms.ts<br/>搜索词注入]
+    Stats[stats.ts<br/>统计聚合+HTML面板]
+    Alerting[alerting.ts<br/>告警通知]
+    Safety[content-safety.ts<br/>违规词扫描]
+    Sources[sources.ts<br/>RSS 素材采集]
+    Related[related.ts<br/>相关文章计算]
+  end
+
+  subgraph 基础设施
+    Types[types.ts<br/>类型定义]
+    Schema[schema.ts<br/>Drizzle 表定义]
+    Utils[utils.ts<br/>JSON/HTML/JSON-LD]
+    Prompts[prompts.ts<br/>默认提示词]
+  end
+
+  CLI --> Executor
+  Runner --> Executor
+  Scheduler --> Runner
+  Executor --> Pipeline
+  Executor --> Stats
+  Executor --> Alerting
+  Pipeline --> AiFallback
+  Pipeline --> Quality
+  Pipeline --> SearchTerms
+  Pipeline --> Safety
+  Pipeline --> Sources
+  Pipeline --> Related
+  AiFallback --> AiConfig
+  AiFallback --> LocalGateway
+  Pipeline --> Utils
+  Pipeline --> Prompts
+```
+
+## 降级策略
+
+AI 调用采用三级降级 + 自愈 + 互斥锁，确保最大可用性：
+
+### 三级 AI 降级链
+
+```
+本地 AI（Ollama 等）→ CF Workers AI（16 模型轮换）→ OpenRouter（10 免费模型兜底）
+```
+
+| 优先级 | 提供方 | 说明 |
+|--------|--------|------|
+| 1 | 本地 AI | `LocalAiProvider`，Ollama 等，最高优先级 |
+| 2 | CF Workers AI | `CfBindingProvider`，16 个免费模型按 priority 轮换 |
+| 3 | OpenRouter | `OpenRouterProvider`，10 个免费模型兜底 |
+
+故障分类（`classifyError`）：
+
+| 分类 | 触发条件 | 处理 |
+|------|----------|------|
+| `quota_exceeded` | 429 + quota/limit/exhausted | 标记模型当天不可用，切换下一个 |
+| `rate_limit` | 429（非 quota） | 切换下一个模型 |
+| `timeout` | 超时 / AbortError | 切换下一个模型 |
+| `server_error` | 5xx | 切换下一个模型 |
+| `invalid_request` | 400 | 切换下一个模型 |
+| `unknown` | 其他 | 切换下一个模型 |
+
+### 本地网关自愈
+
+```
+网关离线 → 执行 localGatewayStartCommand 拉起 → 等待 autoStartWaitMs → 重探测
+网关 degraded → 执行 localChromeStartCommand 拉起浏览器 → 等待 → 重探测
+```
+
+### 跨站互斥锁
+
+多站同机共用本地网关时，通过文件锁串行化：
+- 各站配置同一 `localLockFile` 路径
+- 后到站等待 `localLockWaitMs`（默认 180s）
+- 超时则本轮跳过，由云端 alarm 兜底
+- 锁文件超过 `localLockStaleMs`（默认 30min）视为过期，自动抢占
+
+### 告警
+
+运行结束后检查成功率，低于阈值（默认 60%）或全部失败时触发 webhook 通知：
+- 支持飞书 / 钉钉 / 通用 HTTP POST
+- 通过 `ExecutorConfig.alert` 配置
+
+---
+
 ## 安装
 
 ### 方式一：从 GitHub 安装（推荐）
