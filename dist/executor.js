@@ -7,6 +7,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.execute = execute;
 const pipeline_js_1 = require("./pipeline.js");
+const stats_js_1 = require("./stats.js");
 // —— 工具 ——
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // —— 执行器 ——
@@ -49,9 +50,7 @@ async function execute(db, config = {}) {
     }
     // 3. 检查本地网关（已提供云端 client 时跳过，Workers/线上环境无本地网关）
     //    惰性加载 local-gateway：纯云端站（config.ai.client 已提供）不 require，零开销
-    const lg = config.ai?.client
-        ? null
-        : require('./local-gateway.js');
+    const lg = config.ai?.client ? null : require('./local-gateway.js');
     let probe = lg ? await lg.probeLocalGateway(localGateway) : null;
     let localOnline = probe ? probe.online : false;
     // 3.1 自愈：离线/degraded → 拉起（网关或浏览器）→ 等待 → 重探测一次
@@ -123,7 +122,12 @@ async function execute(db, config = {}) {
         log(`使用本地网关 ${localGateway}，模型候选 ${localModels.join(' -> ')}`);
         pipelineConfig.ai = {
             ...pipelineConfig.ai,
-            client: lg.createLocalGatewayClient({ gateway: localGateway, models: localModels, timeoutMs: localTimeoutMs, logger: log }),
+            client: lg.createLocalGatewayClient({
+                gateway: localGateway,
+                models: localModels,
+                timeoutMs: localTimeoutMs,
+                logger: log,
+            }),
             model: localModels[0],
         };
     }
@@ -161,7 +165,22 @@ async function execute(db, config = {}) {
                         dryRun,
                     });
                 }
-                catch { /* 日志失败不阻塞 */ }
+                catch {
+                    /* 日志失败不阻塞 */
+                }
+            }
+            // 7. 统计面板（运行结束后聚合历史日志，结尾汇总关键指标）
+            if (config.fetchRunLogs) {
+                try {
+                    const logs = await config.fetchRunLogs();
+                    if (logs.length) {
+                        const summary = (0, stats_js_1.aggregateStats)(logs);
+                        log(`\n${(0, stats_js_1.renderStatsMarkdown)(summary)}`);
+                    }
+                }
+                catch (e) {
+                    log('[warn] 统计面板生成失败：', e.message);
+                }
             }
             return { mode: localOnline ? 'local' : 'cloud', pipeline: result };
         }
@@ -184,7 +203,9 @@ async function execute(db, config = {}) {
                     dryRun,
                 });
             }
-            catch { /* noop */ }
+            catch {
+                /* noop */
+            }
         }
         throw e;
     }

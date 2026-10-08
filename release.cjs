@@ -209,6 +209,11 @@ for (const s of STATIONS) {
   const name = s.split(path.sep).pop();
   if (ONLY && !ONLY.includes(name)) continue;
   if (!fs.existsSync(path.join(s, 'package.json'))) continue;
+  // 跳过没有 build 脚本的站（如 seo-optimizer）
+  try {
+    const sp = JSON.parse(fs.readFileSync(path.join(s, 'package.json'), 'utf8'));
+    if (!sp.scripts || !sp.scripts.build) { skipped.push(name); continue; }
+  } catch { skipped.push(name); continue; }
   const srcFP = srcFingerprint(s);
   const hadFail = !!(state[name] && state[name].failed);
   if (RESUME && !hadFail) { skipped.push(name); continue; }

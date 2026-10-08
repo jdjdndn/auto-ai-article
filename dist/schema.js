@@ -44,9 +44,7 @@ exports.seeds = (0, sqlite_core_1.sqliteTable)('seeds', {
     fp: (0, sqlite_core_1.text)('fp').notNull().default(''),
     createdAt: (0, sqlite_core_1.text)('created_at').notNull(),
     updatedAt: (0, sqlite_core_1.text)('updated_at').notNull(),
-}, (t) => [
-    (0, sqlite_core_1.index)('idx_seeds_status').on(t.status),
-]);
+}, (t) => [(0, sqlite_core_1.index)('idx_seeds_status').on(t.status)]);
 // —— 运行日志 ——
 exports.runLogs = (0, sqlite_core_1.sqliteTable)('run_logs', {
     id: (0, sqlite_core_1.integer)('id').primaryKey({ autoIncrement: true }),
@@ -58,6 +56,4 @@ exports.runLogs = (0, sqlite_core_1.sqliteTable)('run_logs', {
     error: (0, sqlite_core_1.text)('error'),
     dryRun: (0, sqlite_core_1.integer)('dry_run').notNull().default(0),
     createdAt: (0, sqlite_core_1.text)('created_at').notNull(),
-}, (t) => [
-    (0, sqlite_core_1.index)('idx_run_logs_created').on(t.createdAt),
-]);
+}, (t) => [(0, sqlite_core_1.index)('idx_run_logs_created').on(t.createdAt)]);

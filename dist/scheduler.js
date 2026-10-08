@@ -137,16 +137,13 @@ exports.ArticleScheduler = ArticleScheduler;
 function createPipelineDB(db) {
     return {
         async fetchPendingSeeds(size) {
-            return db.select().from(schema_js_1.seeds)
-                .where((0, drizzle_orm_1.eq)(schema_js_1.seeds.status, 'pending'))
-                .orderBy((0, drizzle_orm_1.desc)(schema_js_1.seeds.id))
-                .limit(size);
+            return db.select().from(schema_js_1.seeds).where((0, drizzle_orm_1.eq)(schema_js_1.seeds.status, 'pending')).orderBy((0, drizzle_orm_1.desc)(schema_js_1.seeds.id)).limit(size);
         },
         async insertSeeds(items, source) {
             const now = new Date().toISOString();
             const rows = items
-                .filter(it => it.raw?.length >= 8)
-                .map(it => ({
+                .filter((it) => it.raw?.length >= 8)
+                .map((it) => ({
                 raw: it.raw,
                 category: it.category || '优惠',
                 template: it.template || 'deal',
@@ -161,19 +158,25 @@ function createPipelineDB(db) {
             return { added: rows.length };
         },
         async markSeedDone(id, articleId) {
-            await db.update(schema_js_1.seeds).set({
+            await db
+                .update(schema_js_1.seeds)
+                .set({
                 status: 'done',
                 articleId,
                 error: null,
                 updatedAt: new Date().toISOString(),
-            }).where((0, drizzle_orm_1.eq)(schema_js_1.seeds.id, id));
+            })
+                .where((0, drizzle_orm_1.eq)(schema_js_1.seeds.id, id));
         },
         async markSeedFailed(id, error) {
-            await db.update(schema_js_1.seeds).set({
+            await db
+                .update(schema_js_1.seeds)
+                .set({
                 status: 'failed',
                 error: String(error).slice(0, 500),
                 updatedAt: new Date().toISOString(),
-            }).where((0, drizzle_orm_1.eq)(schema_js_1.seeds.id, id));
+            })
+                .where((0, drizzle_orm_1.eq)(schema_js_1.seeds.id, id));
         },
         async insertArticles(articlesList) {
             const results = [];
@@ -183,7 +186,7 @@ function createPipelineDB(db) {
                 title: a.title,
                 summary: a.summary || '',
                 content: typeof a.content === 'string' ? a.content : JSON.stringify(a.content || []),
-                firstImage: (0, utils_js_1.firstImageOf)(typeof a.content === 'string' ? [] : (a.content || [])),
+                firstImage: (0, utils_js_1.firstImageOf)(typeof a.content === 'string' ? [] : a.content || []),
                 template: a.template || 'default',
                 category: a.category || '',
                 tags: typeof a.tags === 'string' ? a.tags : JSON.stringify(a.tags || []),
@@ -208,8 +211,8 @@ function createPipelineDB(db) {
             }
             return {
                 total: articlesList.length,
-                created: results.filter(r => r.ok).length,
-                failed: results.filter(r => !r.ok).length,
+                created: results.filter((r) => r.ok).length,
+                failed: results.filter((r) => !r.ok).length,
                 results,
             };
         },

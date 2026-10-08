@@ -14,7 +14,20 @@
       "types": "./dist/client.d.ts",
       "import": "./dist/client.js",
       "require": "./dist/client.js"
-    }
+    },
+    "./ai-config": {
+      "types": "./dist/ai-config.d.ts",
+      "require": "./dist/ai-config.js"
+    },
+    "./ai-fallback": {
+      "types": "./dist/ai-fallback.d.ts",
+      "require": "./dist/ai-fallback.js"
+    },
+    "./local-gateway": {
+      "types": "./dist/local-gateway.d.ts",
+      "require": "./dist/local-gateway.js"
+    },
+    "./package.json": "./package.json"
   },
   "bin": {
     "ai-article-pipeline": "./dist/cli.js"
@@ -23,11 +36,21 @@
     "dist",
     "README.md"
   ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit",
-    "sync-vendor": "npm run build && node sync-vendor.cjs"
+    "test": "tsc -p tsconfig.test.json && cd dist-test/test && node --test",
+    "test:watch": "vitest",
+    "lint": "biome check src",
+    "format": "biome check --write src",
+    "sync-vendor": "npm run build && node sync-vendor.cjs",
+    "release": "node release.cjs",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "ai",
@@ -36,11 +59,21 @@
     "content-generation",
     "llm"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jdjdndn/auto-ai-article.git"
+  },
+  "homepage": "https://github.com/jdjdndn/auto-ai-article#readme",
+  "bugs": {
+    "url": "https://github.com/jdjdndn/auto-ai-article/issues"
+  },
   "license": "MIT",
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
     "@types/node": "^26.6.3",
     "cloudflare-workers": "^0.0.14",
-    "typescript": "^5.5.0"
+    "typescript": "^5.5.0",
+    "vitest": "^2.1.9"
   },
   "peerDependencies": {
     "drizzle-orm": "^0.45.3"

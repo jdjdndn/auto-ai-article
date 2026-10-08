@@ -147,17 +147,14 @@ export class ArticleScheduler {
 function createPipelineDB(db: any) {
   return {
     async fetchPendingSeeds(size: number) {
-      return db.select().from(seeds)
-        .where(eq(seeds.status, 'pending'))
-        .orderBy(desc(seeds.id))
-        .limit(size)
+      return db.select().from(seeds).where(eq(seeds.status, 'pending')).orderBy(desc(seeds.id)).limit(size)
     },
 
     async insertSeeds(items: Array<{ raw: string; category?: string; template?: string }>, source: string) {
       const now = new Date().toISOString()
       const rows = items
-        .filter(it => it.raw?.length >= 8)
-        .map(it => ({
+        .filter((it) => it.raw?.length >= 8)
+        .map((it) => ({
           raw: it.raw,
           category: it.category || '优惠',
           template: it.template || 'deal',
@@ -173,20 +170,26 @@ function createPipelineDB(db: any) {
     },
 
     async markSeedDone(id: number, articleId: string) {
-      await db.update(seeds).set({
-        status: 'done',
-        articleId,
-        error: null,
-        updatedAt: new Date().toISOString(),
-      }).where(eq(seeds.id, id))
+      await db
+        .update(seeds)
+        .set({
+          status: 'done',
+          articleId,
+          error: null,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(seeds.id, id))
     },
 
     async markSeedFailed(id: number, error: string) {
-      await db.update(seeds).set({
-        status: 'failed',
-        error: String(error).slice(0, 500),
-        updatedAt: new Date().toISOString(),
-      }).where(eq(seeds.id, id))
+      await db
+        .update(seeds)
+        .set({
+          status: 'failed',
+          error: String(error).slice(0, 500),
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(seeds.id, id))
     },
 
     async insertArticles(articlesList: any[]) {
@@ -197,7 +200,7 @@ function createPipelineDB(db: any) {
         title: a.title,
         summary: a.summary || '',
         content: typeof a.content === 'string' ? a.content : JSON.stringify(a.content || []),
-        firstImage: firstImageOf(typeof a.content === 'string' ? [] : (a.content || [])),
+        firstImage: firstImageOf(typeof a.content === 'string' ? [] : a.content || []),
         template: a.template || 'default',
         category: a.category || '',
         tags: typeof a.tags === 'string' ? a.tags : JSON.stringify(a.tags || []),
@@ -219,13 +222,21 @@ function createPipelineDB(db: any) {
       }
       return {
         total: articlesList.length,
-        created: results.filter(r => r.ok).length,
-        failed: results.filter(r => !r.ok).length,
+        created: results.filter((r) => r.ok).length,
+        failed: results.filter((r) => !r.ok).length,
         results,
       }
     },
 
-    async insertRunLog(log: { runAt?: string; model?: string; total?: number; ok?: number; fail?: number; error?: string | null; dryRun?: boolean }) {
+    async insertRunLog(log: {
+      runAt?: string
+      model?: string
+      total?: number
+      ok?: number
+      fail?: number
+      error?: string | null
+      dryRun?: boolean
+    }) {
       await db.insert(runLogs).values({
         runAt: log.runAt || new Date().toISOString(),
         model: log.model || '',

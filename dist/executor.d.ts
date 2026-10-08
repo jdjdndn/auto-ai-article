@@ -1,6 +1,7 @@
 import type { PipelineConfig, PipelineRunResult, RunLogInput } from './types.js';
 import { type PipelineDB } from './pipeline.js';
 import type { LocalGatewayProbe } from './local-gateway.js';
+import { type RunLogEntry } from './stats.js';
 export type { LocalGatewayProbe };
 export interface ExecutorConfig extends PipelineConfig {
     /** 每日目标发布篇数（默认 3） */
@@ -52,7 +53,7 @@ export interface ExecutorConfig extends PipelineConfig {
     }) => Promise<{
         ok: boolean;
         message?: string;
-    } | void>;
+    } | undefined>;
     /** dry-run 模式：只生成不入库 */
     dryRun?: boolean;
     /** 今日已发布篇数查询函数 */
@@ -61,8 +62,8 @@ export interface ExecutorConfig extends PipelineConfig {
     hasLocalRunToday?: () => Promise<boolean>;
     /** 运行日志上报函数 */
     reportRun?: (log: RunLogInput) => Promise<void>;
-    /** 自定义 logger（默认 console.log） */
-    logger?: (...args: unknown[]) => void;
+    /** 获取历史运行日志（运行结束后聚合统计面板输出） */
+    fetchRunLogs?: () => Promise<RunLogEntry[]>;
 }
 export interface ExecutorResult {
     mode: 'local' | 'cloud' | 'cloud-fallback' | 'skipped';

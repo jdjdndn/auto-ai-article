@@ -170,7 +170,7 @@ console.log(`成功 ${result.ok} 篇，失败 ${result.fail} 篇`)
 
 ### 2. 执行器：完整流程编排
 
-执行器封装了每日生成的完整流程：配额检查 → 防重复 → 本地网关检测 → 云端兜底 → 运��日志。
+执行器封装了每日生成的完整流程：配额检查 → 防重复 → 本地网关检测 → 云端兜底 → 运行日志。
 
 ```javascript
 const { execute } = require('ai-article-pipeline')

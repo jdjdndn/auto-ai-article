@@ -3,18 +3,31 @@
 // ============================================================
 
 import type {
-  Seed, SeedInput, GeneratedArticle, InsertResult,
-  AiClient, AiConfig, AiMessage, PipelineConfig,
-  PipelineRunResult, TopicSuggestion, RunLogInput, ContentBlock,
+  Seed,
+  SeedInput,
+  GeneratedArticle,
+  InsertResult,
+  AiClient,
+  AiConfig,
+  AiMessage,
+  PipelineConfig,
+  PipelineRunResult,
+  TopicSuggestion,
+  RunLogInput,
+  ContentBlock,
+  Logger,
 } from './types.js'
 import { aiSystemPrompt, aiSuggestPrompt } from './prompts.js'
 import { extractJson, asAnyArray, normalizeContentBlocks } from './utils.js'
 import { checkArticleSafety, replaceViolatingWords } from './content-safety.js'
 import { createAiClient } from './ai-fallback.js'
+import { scoreArticle } from './article-quality.js'
+import { injectSearchTerms } from './search-terms.js'
 
 // —— 占位 URL 清洗 ——
 
-const PLACEHOLDER_URL = /(^|[/.@])(example\.(com|org|net)|test\.com|yourlink\.com|yourdomain\.com|your-url\.com|sample\.com|domain\.com|website\.com|lorem\.ipsum|placeholder\.com)/i
+const PLACEHOLDER_URL =
+  /(^|[/.@])(example\.(com|org|net)|test\.com|yourlink\.com|yourdomain\.com|your-url\.com|sample\.com|domain\.com|website\.com|lorem\.ipsum|placeholder\.com)/i
 
 function cleanUrl(u: unknown): string {
   if (typeof u !== 'string') return ''
@@ -26,8 +39,10 @@ function cleanUrl(u: unknown): string {
 
 function sanitizeLinks(arr: unknown): Array<{ label: string; url: string }> {
   return (Array.isArray(arr) ? arr : [])
-    .filter((l): l is { label: string; url: string } =>
-      l != null && typeof l === 'object' && typeof (l as any).url === 'string' && !!cleanUrl((l as any).url))
+    .filter(
+      (l): l is { label: string; url: string } =>
+        l != null && typeof l === 'object' && typeof (l as any).url === 'string' && !!cleanUrl((l as any).url),
+    )
     .map((l) => ({ label: String((l as any).label || ''), url: cleanUrl((l as any).url) }))
 }
 
@@ -39,12 +54,30 @@ function sanitizeBlocks(blocks: ContentBlock[]): ContentBlock[] {
         const { link: _, ...rest } = b as any
         return rest as ContentBlock
       }
-      if ((b.type === 'image' || b.type === 'video') && typeof (b as any).url === 'string' && !cleanUrl((b as any).url)) {
+      if (
+        (b.type === 'image' || b.type === 'video') &&
+        typeof (b as any).url === 'string' &&
+        !cleanUrl((b as any).url)
+      ) {
         return null
       }
       return b
     })
     .filter((b): b is ContentBlock => b !== null)
+}
+
+// —— 文章 → 纯文本（供质量评分用）——
+
+function articleToText(a: GeneratedArticle): string {
+  const parts: string[] = [`# ${a.title}`, a.summary]
+  for (const b of a.content) {
+    if (b.type === 'h2') parts.push(`## ${b.text}`)
+    else if ('text' in b && typeof b.text === 'string') parts.push(b.text)
+    if (b.type === 'list' && Array.isArray(b.items)) parts.push(b.items.map((i) => `- ${i}`).join('\n'))
+    if (b.type === 'price' && b.desc) parts.push(b.desc)
+  }
+  for (const f of a.faq) parts.push(f.q, f.a)
+  return parts.filter(Boolean).join('\n')
 }
 
 // —— 默认 AI 客户端（复用 ai-fallback 的 OpenAI 兼容客户端）——
@@ -73,7 +106,13 @@ const defaultSleep: SleepFn = (ms) => new Promise((r) => setTimeout(r, ms))
  * - retries：额外重试次数（总尝试 retries+1）
  * - delaysMs：各次重试前的等待间隔；缺省 1s×(i+1) 递增（保持旧行为）
  */
-export async function withRetry<T>(fn: (attempt: number) => Promise<T>, retries: number, label: string, sleep: SleepFn = defaultSleep, delaysMs?: number[]): Promise<T> {
+export async function withRetry<T>(
+  fn: (attempt: number) => Promise<T>,
+  retries: number,
+  label: string,
+  sleep: SleepFn = defaultSleep,
+  delaysMs?: number[],
+): Promise<T> {
   let lastErr: Error | undefined
   for (let i = 0; i <= retries; i++) {
     try {
@@ -89,7 +128,11 @@ export async function withRetry<T>(fn: (attempt: number) => Promise<T>, retries:
 }
 
 /** 简单并发限制：并发执行 tasks，最多同时 limit 个 */
-async function mapWithConcurrency<T, R>(tasks: T[], limit: number, fn: (t: T, i: number) => Promise<R>): Promise<PromiseSettledResult<R>[]> {
+async function mapWithConcurrency<T, R>(
+  tasks: T[],
+  limit: number,
+  fn: (t: T, i: number) => Promise<R>,
+): Promise<PromiseSettledResult<R>[]> {
   const results: PromiseSettledResult<R>[] = new Array(tasks.length)
   let nextIdx = 0
   async function worker() {
@@ -130,6 +173,8 @@ export interface PipelineDB {
 
 export function createPipeline(db: PipelineDB, config: PipelineConfig = {}): Pipeline {
   const target = config.target ?? 3
+  const log: Logger =
+    config.logger || ((...args: unknown[]) => console.log(new Date().toISOString(), '[pipeline]', ...args))
 
   // AI 客户端选择逻辑：
   // 1. config.ai.client → 直接使用（最高优先级）
@@ -149,8 +194,8 @@ export function createPipeline(db: PipelineDB, config: PipelineConfig = {}): Pip
     })
   } else if (ai.openrouter || process.env.OPENROUTER_API_KEY) {
     const or = ai.openrouter
-    const orKey = (or && or.apiKey) || process.env.OPENROUTER_API_KEY!
-    const orModels = or && or.models
+    const orKey = or?.apiKey || process.env.OPENROUTER_API_KEY!
+    const orModels = or?.models
     aiClient = createAiClient({
       openrouter: { apiKey: orKey, ...(orModels ? { models: orModels } : {}) },
     })
@@ -171,27 +216,37 @@ export function createPipeline(db: PipelineDB, config: PipelineConfig = {}): Pip
   // —— AI 选题（带重试）——
 
   async function suggestTopics(): Promise<TopicSuggestion[]> {
-    return withRetry(async () => {
-      const text = await aiClient([
-        { role: 'system', content: suggestPrompt },
-        { role: 'user', content: '请输出 3 个选题 JSON 数组。只输出 JSON 数组，不要 markdown，不要解释。' },
-      ])
-      const parsed = extractJson(text)
-      const arr = asAnyArray(parsed)
-      if (!arr || !arr.length) {
-        const snippet = String(text || '').slice(0, 180).replace(/\s+/g, ' ')
-        throw new Error(`AI 选题返回空数组 raw=${snippet}`)
-      }
-      const items = arr
-        .map((x: any) => ({
-          title: String(x?.title || '').trim(),
-          angle: String(x?.angle || '').trim(),
-          category: ['优惠', '攻略', '好物', '副业'].includes(x?.category) ? x.category : 'auto',
-        }))
-        .filter((x) => x.title && x.angle)
-      if (!items.length) throw new Error('AI 选题字段无效（缺 title/angle）')
-      return items.slice(0, 3)
-    }, suggestRetries, 'AI 选题')
+    return withRetry(
+      async () => {
+        const baseUserContent = '请输出 3 个选题 JSON 数组。只输出 JSON 数组，不要 markdown，不要解释。'
+        const userContent = config.searchTerms?.length
+          ? injectSearchTerms(baseUserContent, config.searchTerms)
+          : baseUserContent
+        const text = await aiClient([
+          { role: 'system', content: suggestPrompt },
+          { role: 'user', content: userContent },
+        ])
+        const parsed = extractJson(text)
+        const arr = asAnyArray(parsed)
+        if (!arr || !arr.length) {
+          const snippet = String(text || '')
+            .slice(0, 180)
+            .replace(/\s+/g, ' ')
+          throw new Error(`AI 选题返回空数组 raw=${snippet}`)
+        }
+        const items = arr
+          .map((x: any) => ({
+            title: String(x?.title || '').trim(),
+            angle: String(x?.angle || '').trim(),
+            category: ['优惠', '攻略', '好物', '副业'].includes(x?.category) ? x.category : 'auto',
+          }))
+          .filter((x) => x.title && x.angle)
+        if (!items.length) throw new Error('AI 选题字段无效（缺 title/angle）')
+        return items.slice(0, 3)
+      },
+      suggestRetries,
+      'AI 选题',
+    )
   }
 
   // —— 单素材生成 ——
@@ -204,73 +259,83 @@ export function createPipeline(db: PipelineDB, config: PipelineConfig = {}): Pip
 
     // 生成重试：TFG 等浏览器网关在会话不稳定窗口会返回 HTTP 200 但内容不合格（非 JSON/缺字段/过短），
     // 与网络错误一样需要重试；重试间隔放大（8s/16s…）以覆盖浏览器会话恢复时间
-    return withRetry(async () => {
-      const text = await aiClient([
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `原始信息：\n${JSON.stringify(raw)}` },
-      ])
-      const a = extractJson(text) as any
-      if (!a) throw new Error('AI 返回无法解析为 JSON')
+    return withRetry(
+      async () => {
+        const text = await aiClient([
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `原始信息：\n${JSON.stringify(raw)}` },
+        ])
+        const a = extractJson(text) as any
+        if (!a) throw new Error('AI 返回无法解析为 JSON')
 
-      const item: GeneratedArticle = {
-        title: String(a.title || '').trim(),
-        summary: String(a.summary || ''),
-        content: normalizeContentBlocks(a.content),
-        template: (['deal', 'guide', 'faq', 'default'].includes(a.template)
-          ? a.template
-          : (opts.template && opts.template !== 'auto' ? opts.template : 'deal')) as GeneratedArticle['template'],
-        category: opts.category && opts.category !== 'auto' ? opts.category : (a.category || '优惠'),
-        tags: Array.isArray(a.tags) ? a.tags : [],
-        faq: Array.isArray(a.faq) ? a.faq : [],
-        links: Array.isArray(a.links) ? a.links : [],
-        expiresAt: a.expiresAt || null,
-      }
+        const item: GeneratedArticle = {
+          title: String(a.title || '').trim(),
+          summary: String(a.summary || ''),
+          content: normalizeContentBlocks(a.content),
+          template: (['deal', 'guide', 'faq', 'default'].includes(a.template)
+            ? a.template
+            : opts.template && opts.template !== 'auto'
+              ? opts.template
+              : 'deal') as GeneratedArticle['template'],
+          category: opts.category && opts.category !== 'auto' ? opts.category : a.category || '优惠',
+          tags: Array.isArray(a.tags) ? a.tags : [],
+          faq: Array.isArray(a.faq) ? a.faq : [],
+          links: Array.isArray(a.links) ? a.links : [],
+          expiresAt: a.expiresAt || null,
+        }
 
-      if (!item.title || !item.content.length) throw new Error('AI 结果缺 title/content')
+        if (!item.title || !item.content.length) throw new Error('AI 结果缺 title/content')
 
-      // 发布模式：draft（默认，不设置 status）/ published / seed（按素材 publishAt 决定）
-      if (publishMode === 'seed') {
-        item.publishAt = opts.publishAt ?? null
-        item.status = opts.publishAt ? 'draft' : 'published'
-      } else if (publishMode === 'published') {
-        item.publishAt = opts.publishAt ?? null
-        item.status = 'published'
-      }
+        // 发布模式：draft（默认，不设置 status）/ published / seed（按素材 publishAt 决定）
+        if (publishMode === 'seed') {
+          item.publishAt = opts.publishAt ?? null
+          item.status = opts.publishAt ? 'draft' : 'published'
+        } else if (publishMode === 'published') {
+          item.publishAt = opts.publishAt ?? null
+          item.status = 'published'
+        }
 
-      // 内容充实度兜底
-      const contentChars = JSON.stringify(item.content).length
-      if (item.content.length < 3 || contentChars < 250) {
-        throw new Error(`AI 内容过短（${item.content.length} 块 / ${contentChars} 字），请重试`)
-      }
+        // 内容充实度兜底
+        const contentChars = JSON.stringify(item.content).length
+        if (item.content.length < 3 || contentChars < 250) {
+          throw new Error(`AI 内容过短（${item.content.length} 块 / ${contentChars} 字），请重试`)
+        }
 
-      // 链接池解析钩子（站点特有：如 article-site 的 applyLinkPool）— 须在 URL 清洗之前，
-      // 先把 AI 输出的 ref/linkId 解析成链接池真实 URL，再由 sanitize 兜底清占位/非法链接
-      let resolved: GeneratedArticle = item
-      if (config.resolveLinks) {
-        resolved = config.resolveLinks(item)
-      }
+        // 链接池解析钩子（站点特有：如 article-site 的 applyLinkPool）— 须在 URL 清洗之前，
+        // 先把 AI 输出的 ref/linkId 解析成链接池真实 URL，再由 sanitize 兜底清占位/非法链接
+        let resolved: GeneratedArticle = item
+        if (config.resolveLinks) {
+          resolved = config.resolveLinks(item)
+        }
 
-      // URL 清洗
-      if (sanitizeUrls) {
-        resolved.links = sanitizeLinks(resolved.links)
-        resolved.content = sanitizeBlocks(resolved.content)
-      }
+        // URL 清洗
+        if (sanitizeUrls) {
+          resolved.links = sanitizeLinks(resolved.links)
+          resolved.content = sanitizeBlocks(resolved.content)
+        }
 
-      return resolved
-    }, generateRetries, 'AI 生成', (ms) => new Promise((r) => setTimeout(r, ms * 8)))
+        return resolved
+      },
+      generateRetries,
+      'AI 生成',
+      (ms) => new Promise((r) => setTimeout(r, ms * 8)),
+    )
   }
 
   // —— 内容安全处理 ——
 
   function applySafety(article: GeneratedArticle): { article: GeneratedArticle; hit: boolean } {
-    const safety = checkArticleSafety({
-      title: article.title,
-      summary: article.summary,
-      content: article.content,
-      faq: article.faq,
-      tags: article.tags,
-      links: article.links,
-    }, extraSafetyRules)
+    const safety = checkArticleSafety(
+      {
+        title: article.title,
+        summary: article.summary,
+        content: article.content,
+        faq: article.faq,
+        tags: article.tags,
+        links: article.links,
+      },
+      extraSafetyRules,
+    )
 
     if (!safety.hits.length) return { article, hit: false }
 
@@ -342,7 +407,9 @@ export function createPipeline(db: PipelineDB, config: PipelineConfig = {}): Pip
     const linked = list.filter((s) => s.articleId)
     if (linked.length) {
       for (const s of linked) {
-        await db.markSeedDone(s.id, s.articleId!).catch(() => {})
+        await db
+          .markSeedDone(s.id, s.articleId!)
+          .catch((e) => log('清理残留 pending 失败:', (e as Error)?.message || e))
       }
       list = list.filter((s) => !s.articleId)
     }
@@ -354,7 +421,9 @@ export function createPipeline(db: PipelineDB, config: PipelineConfig = {}): Pip
     const outcomes = await mapWithConcurrency(targets, concurrency, async (s) => {
       const raw = String(s.raw || '')
       if (raw.length < 8) {
-        await db.markSeedFailed(s.id, '素材过短').catch(() => {})
+        await db
+          .markSeedFailed(s.id, '素材过短')
+          .catch((e) => log('标记素材失败（素材过短）失败:', (e as Error)?.message || e))
         throw new Error('素材过短')
       }
 
@@ -366,6 +435,20 @@ export function createPipeline(db: PipelineDB, config: PipelineConfig = {}): Pip
 
       // 内容安全处理
       const { article: safeArticle } = applySafety(article)
+
+      // 质量评分门控（低分跳过入库，杜绝水文上线）
+      if (config.quality) {
+        const score = scoreArticle(articleToText(safeArticle), config.quality)
+        if (!score.pass) {
+          await db
+            .markSeedFailed(s.id, `质量不达标 ${score.total}分`)
+            .catch((e) => log('标记素材失败（质量不达标）失败:', (e as Error)?.message || e))
+          throw new Error(`文章质量不达标 ${score.total}分：套话命中 ${score.clicheHits.join(', ') || '无'}`)
+        }
+        log(
+          `质量评分 ${score.total}分（信息${score.details.infoDensity}/套话${score.details.clicheDensity}/结构${score.details.structure}/原创${score.details.originality}）`,
+        )
+      }
 
       // 入库
       const r = await db.insertArticles([safeArticle])
@@ -399,7 +482,9 @@ export function createPipeline(db: PipelineDB, config: PipelineConfig = {}): Pip
         fail: result.fail,
         error: result.errors.length ? result.errors.join('; ').slice(0, 300) : null,
       })
-    } catch { /* 日志失败不阻塞 */ }
+    } catch {
+      /* 日志失败不阻塞 */
+    }
 
     return result
   }

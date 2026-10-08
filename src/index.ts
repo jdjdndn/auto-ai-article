@@ -23,6 +23,7 @@ export type {
   TopicSuggestion,
   RunLogInput,
   CtaConfig,
+  Logger,
 } from './types.js'
 
 // 提示词
@@ -33,7 +34,36 @@ export { articles, seeds, runLogs } from './schema.js'
 export type { ArticleRow, SeedRow, RunLogRow } from './schema.js'
 
 // 工具函数
-export { extractJson, safeJson, normalizeJson, firstImageOf, firstNonEmpty, asAnyArray, normalizeContentBlocks, escapeHtml, renderArticleBlocks, renderArticleCta, generateToc, readingTime, articleCss, renderArticleLinks, renderRelatedArticles, renderFaqSection, renderShareBar, flattenToStrings, flattenFaq, flattenLinks, safeArticle, cnTodayStartISO } from './utils.js'
+export {
+  extractJson,
+  safeJson,
+  normalizeJson,
+  firstImageOf,
+  firstNonEmpty,
+  asAnyArray,
+  normalizeContentBlocks,
+  escapeHtml,
+  renderArticleBlocks,
+  renderArticleCta,
+  generateToc,
+  readingTime,
+  articleCss,
+  renderArticleLinks,
+  renderRelatedArticles,
+  renderFaqSection,
+  renderShareBar,
+  articleJsonLd,
+  organizationJsonLd,
+  websiteJsonLd,
+  productJsonLd,
+  faqJsonLd,
+  initArticleActions,
+  flattenToStrings,
+  flattenFaq,
+  flattenLinks,
+  safeArticle,
+  cnTodayStartISO,
+} from './utils.js'
 
 // 素材采集
 export { fetchRssFeed, extractArticleText, textSimilarity, normalizeText } from './sources.js'
@@ -43,8 +73,8 @@ export type { RssItem } from './sources.js'
 export { scanText, checkArticleSafety, replaceViolatingWords } from './content-safety.js'
 
 // 管线
-export { createPipeline } from './pipeline.js'
-export type { Pipeline, PipelineDB } from './pipeline.js'
+export { createPipeline, withRetry } from './pipeline.js'
+export type { Pipeline, PipelineDB, SleepFn } from './pipeline.js'
 
 // 执行器
 export { execute } from './executor.js'
@@ -59,13 +89,45 @@ export { computeRelatedArticles } from './related.js'
 export type { RelatedCandidate, RelatedOptions } from './related.js'
 
 // 定时调度器（Cloudflare Durable Objects Alarms）
-export { ArticleScheduler, startScheduler, getNextAlarmTime, initDoAlarm, rescheduleDoAlarm, applyWorkerEnv, createDailyAlarmPlugin, createScheduledPlugin } from './scheduler.js'
+export {
+  ArticleScheduler,
+  startScheduler,
+  getNextAlarmTime,
+  initDoAlarm,
+  rescheduleDoAlarm,
+  applyWorkerEnv,
+  createDailyAlarmPlugin,
+  createScheduledPlugin,
+} from './scheduler.js'
 export type { SchedulerConfig, DailyAlarmPluginOptions, ScheduledPluginOptions } from './scheduler.js'
 
 // AI 模型降级库（Cloudflare Workers AI 免费模型故障自动切换）
-export { createFallbackClient, createCloudflareAiClient, createAiClient, createOpenRouterClient, getRecommendedModels, FREE_TEXT_MODELS, OPENROUTER_FREE_MODELS, resetQuotaState, getQuotaExhaustedModels, extractResponse } from './ai-fallback.js'
+export {
+  createFallbackClient,
+  createCloudflareAiClient,
+  createAiClient,
+  createOpenRouterClient,
+  getRecommendedModels,
+  FREE_TEXT_MODELS,
+  OPENROUTER_FREE_MODELS,
+  resetQuotaState,
+  getQuotaExhaustedModels,
+  extractResponse,
+} from './ai-fallback.js'
 export type { AiModel, FallbackConfig, FallbackResult, FallbackReason, UnifiedAiConfig } from './ai-fallback.js'
 
 // AI 配置唯一事实源（模型链 / 备用提供方 / 站点默认模型）
 export { FALLBACK_PROVIDERS, SITE_DEFAULT_MODELS, getSiteDefaultModel } from './ai-config.js'
 export type { FallbackProvider } from './ai-config.js'
+
+// 文章质量评分（信息密度/套话密度/结构完整性/原创性）
+export { scoreArticle } from './article-quality.js'
+export type { QualityScore, QualityOptions } from './article-quality.js'
+
+// 搜索词采集（Google Search Console API + 注入选题）
+export { fetchSearchConsoleTerms, injectSearchTerms } from './search-terms.js'
+export type { SearchTerm, SearchTermsOptions } from './search-terms.js'
+
+// 生成统计聚合（成功率/失败分布/平台稳定性/每日趋势）
+export { aggregateStats, renderStatsMarkdown } from './stats.js'
+export type { RunLogEntry, StatSummary } from './stats.js'

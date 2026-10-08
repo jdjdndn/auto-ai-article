@@ -110,7 +110,7 @@ function createModelClient(model, config) {
             const res = await fetch(`${baseUrl}/accounts/${config.accountId}/ai/run/${model.id}`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${config.apiToken}`,
+                    Authorization: `Bearer ${config.apiToken}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(body),
@@ -156,7 +156,9 @@ function loadBadModels(store) {
         if (data && Array.isArray(data))
             return new Set(data);
     }
-    catch { /* 读失败：从空开始 */ }
+    catch {
+        /* 读失败：从空开始 */
+    }
     return new Set();
 }
 function saveBadModels(store, models) {
@@ -165,7 +167,9 @@ function saveBadModels(store, models) {
     try {
         store.save([...models]);
     }
-    catch { /* 写失败不影响主流程 */ }
+    catch {
+        /* 写失败不影响主流程 */
+    }
 }
 // —— 创建降级客户端 ——
 function createFallbackClient(config) {
@@ -194,12 +198,12 @@ function createFallbackClient(config) {
         const attempted = [];
         // 过滤掉额度已用完或当天已失败的模型
         const unavailable = [...quotaExhausted, ...badModels];
-        const availableModels = models.filter(m => !unavailable.includes(m.id));
+        const availableModels = models.filter((m) => !unavailable.includes(m.id));
         if (availableModels.length === 0) {
             throw new Error(`所有模型当天不可用。已记录：${[...new Set(unavailable)].join(', ')}`);
         }
         if (availableModels.length < models.length) {
-            const skipped = models.filter(m => unavailable.includes(m.id)).map(m => m.id);
+            const skipped = models.filter((m) => unavailable.includes(m.id)).map((m) => m.id);
             log(`跳过当天不可用模型：${skipped.join(', ')}`);
         }
         for (const model of availableModels) {
@@ -245,17 +249,20 @@ function createFallbackClient(config) {
             if (failedForGood) {
                 badModels.add(model.id);
                 saveBadModels(config.badModelStore, badModels);
-                attempted.push({ model: model.id, success: false, reason: classifyError(lastError || new Error('unknown')), error: lastError?.message });
+                attempted.push({
+                    model: model.id,
+                    success: false,
+                    reason: classifyError(lastError || new Error('unknown')),
+                    error: lastError?.message,
+                });
             }
         }
-        throw new Error(`所有模型均失败。尝试记录：${attempted.map(a => `${a.model}(${a.reason || 'error'})`).join(', ')}`);
+        throw new Error(`所有模型均失败。尝试记录：${attempted.map((a) => `${a.model}(${a.reason || 'error'})`).join(', ')}`);
     };
 }
 // —— 获取推荐模型列表 ——
 function getRecommendedModels(chineseOnly = true) {
-    return ai_config_js_1.FREE_TEXT_MODELS
-        .filter(m => !chineseOnly || m.chineseOptimized)
-        .sort((a, b) => a.priority - b.priority);
+    return ai_config_js_1.FREE_TEXT_MODELS.filter((m) => !chineseOnly || m.chineseOptimized).sort((a, b) => a.priority - b.priority);
 }
 // —— 导出默认客户端工厂 ——
 function createCloudflareAiClient(config) {
@@ -307,7 +314,7 @@ function createAiClient(config) {
 function createOpenRouterClient(config) {
     const baseUrl = (config.baseUrl || 'https://openrouter.ai/api/v1').replace(/\/+$/, '');
     const apiKey = config.apiKey;
-    const models = config.models && config.models.length ? config.models : ai_config_js_1.OPENROUTER_FREE_MODELS;
+    const models = config.models?.length ? config.models : ai_config_js_1.OPENROUTER_FREE_MODELS;
     const timeoutMs = config.timeoutMs || 120_000;
     return async (messages) => {
         const attempted = [];

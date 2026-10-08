@@ -108,13 +108,18 @@ async function main() {
     }
     const config = {
         dryRun: !!args.dryRun,
-        dailyTarget: parseInt(String(args.target || '3'), 10),
+        dailyTarget: Number.parseInt(String(args.target || '3'), 10),
         localGateway: String(args.gateway || 'http://localhost:3456/v1'),
         localModel: String(args.model || 'deepseek-chat'),
-        localModels: args['local-models'] ? String(args['local-models']).split(',').map((s) => s.trim()).filter(Boolean) : undefined,
+        localModels: args['local-models']
+            ? String(args['local-models'])
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean)
+            : undefined,
         localLockFile: args['local-lock-file'] ? String(args['local-lock-file']) : undefined,
         cloudModel: String(args['cloud-model'] || ''),
-        localTimeoutMs: parseInt(String(args['local-timeout'] || '280000'), 10),
+        localTimeoutMs: Number.parseInt(String(args['local-timeout'] || '280000'), 10),
         localGatewayStartCommand: args['gateway-start-cmd'] ? String(args['gateway-start-cmd']) : undefined,
         localChromeStartCommand: args['gateway-chrome-start-cmd'] ? String(args['gateway-chrome-start-cmd']) : undefined,
         ai: {

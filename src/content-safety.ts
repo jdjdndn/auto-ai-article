@@ -10,12 +10,38 @@ const DEFAULT_RULES: SafetyRule[] = [
   {
     cat: 'porn',
     label: '色情低俗',
-    words: ['色情', '淫秽', '裸聊', '约炮', '一夜情', '援交', '嫖娼', '卖淫', 'AV在线', '成人影片', '黄色网站', '福利姬', '裸贷'],
+    words: [
+      '色情',
+      '淫秽',
+      '裸聊',
+      '约炮',
+      '一夜情',
+      '援交',
+      '嫖娼',
+      '卖淫',
+      'AV在线',
+      '成人影片',
+      '黄色网站',
+      '福利姬',
+      '裸贷',
+    ],
   },
   {
     cat: 'gambling',
     label: '赌博',
-    words: ['赌博', '博彩', '六合彩', '时时彩', '赌球', '百家乐', '老虎机', '棋牌赚钱', '澳门赌场', '线上赌场', '下注返利'],
+    words: [
+      '赌博',
+      '博彩',
+      '六合彩',
+      '时时彩',
+      '赌球',
+      '百家乐',
+      '老虎机',
+      '棋牌赚钱',
+      '澳门赌场',
+      '线上赌场',
+      '下注返利',
+    ],
   },
   {
     cat: 'drug',
@@ -25,7 +51,18 @@ const DEFAULT_RULES: SafetyRule[] = [
   {
     cat: 'fraud',
     label: '诈骗引流',
-    words: ['刷单返利', '杀猪盘', '电信诈骗', '虚假中奖', '兼职刷单', '博彩套利', '资金盘', '庞氏骗局', '拉人头返现', '高回报理财'],
+    words: [
+      '刷单返利',
+      '杀猪盘',
+      '电信诈骗',
+      '虚假中奖',
+      '兼职刷单',
+      '博彩套利',
+      '资金盘',
+      '庞氏骗局',
+      '拉人头返现',
+      '高回报理财',
+    ],
   },
   {
     cat: 'weapon',
@@ -48,7 +85,24 @@ const DEFAULT_RULES: SafetyRule[] = [
  * 豁免上下文：违规词出现在这些词附近时视为正面提醒，不命中。
  * 例如"不要赌博"、"远离刷单诈骗"、"警惕杀猪盘"是正确的反诈提醒。
  */
-const EXEMPT_PREFIXES = ['不要', '别', '远离', '警惕', '谨防', '小心', '切勿', '严禁', '禁止', '防范', '打击', '整治', '拒绝', '抵制', '反', '防']
+const EXEMPT_PREFIXES = [
+  '不要',
+  '别',
+  '远离',
+  '警惕',
+  '谨防',
+  '小心',
+  '切勿',
+  '严禁',
+  '禁止',
+  '防范',
+  '打击',
+  '整治',
+  '拒绝',
+  '抵制',
+  '反',
+  '防',
+]
 
 /** 对一段文本做类别关键词扫描 */
 export function scanText(text: string, rules: SafetyRule[] = DEFAULT_RULES): SafetyHit[] {
@@ -61,7 +115,7 @@ export function scanText(text: string, rules: SafetyRule[] = DEFAULT_RULES): Saf
       while (idx !== -1) {
         // 检查前面 10 个字符内是否有豁免词（"不要赌博""远离刷单"等正面提醒）
         const before = text.slice(Math.max(0, idx - 10), idx)
-        const exempted = EXEMPT_PREFIXES.some(p => before.includes(p))
+        const exempted = EXEMPT_PREFIXES.some((p) => before.includes(p))
         if (!exempted) {
           found = true
           break
@@ -162,7 +216,7 @@ export function replaceViolatingWords(
       while (idx !== -1) {
         // 豁免上下文："不要赌博"不替换
         const before = result.slice(Math.max(0, idx - 10), idx)
-        if (EXEMPT_PREFIXES.some(p => before.includes(p))) {
+        if (EXEMPT_PREFIXES.some((p) => before.includes(p))) {
           idx = result.indexOf(w, idx + w.length)
           continue
         }
@@ -177,13 +231,22 @@ export function replaceViolatingWords(
 }
 
 function safeParse(s: string): unknown {
-  try { return JSON.parse(s) } catch { return [] }
+  try {
+    return JSON.parse(s)
+  } catch {
+    return []
+  }
 }
 
 function safeArr(v: unknown): any[] {
   if (Array.isArray(v)) return v
   if (typeof v === 'string') {
-    try { const p = JSON.parse(v); return Array.isArray(p) ? p : [] } catch { return [] }
+    try {
+      const p = JSON.parse(v)
+      return Array.isArray(p) ? p : []
+    } catch {
+      return []
+    }
   }
   return []
 }

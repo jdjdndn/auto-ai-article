@@ -2,6 +2,14 @@
 // ai-article-pipeline 类型定义
 // ============================================================
 
+import type { QualityOptions } from './article-quality.js'
+import type { SearchTerm } from './search-terms.js'
+
+// —— 通用 ——
+
+/** 日志函数签名（可注入；默认 console.log） */
+export type Logger = (...args: unknown[]) => void
+
 // —— 素材（Seed）——
 
 export interface Seed {
@@ -80,8 +88,11 @@ export interface FaqItem {
 }
 
 export interface LinkItem {
+  id?: string | number
   label: string
   url: string
+  /** 'more' = 收进折叠区 */
+  kind?: string
 }
 
 // —— 入库结果 ——
@@ -198,6 +209,12 @@ export interface PipelineConfig {
    * - 'seed'：按素材 publishAt 决定（有 publishAt → draft 定时发布；无 → published 立即发布）
    */
   publishMode?: 'draft' | 'published' | 'seed'
+  /** 自定义 logger（默认 console.log） */
+  logger?: Logger
+  /** 文章质量评分配置（生成后评分，低分跳过入库杜绝水文） */
+  quality?: QualityOptions
+  /** 搜索词数据（注入选题 prompt，让 AI 优先覆盖用户实际在搜的词） */
+  searchTerms?: SearchTerm[]
 }
 
 // —— 管线运行结果 ——

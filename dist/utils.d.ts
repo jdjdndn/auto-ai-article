@@ -1,4 +1,5 @@
-import type { ContentBlock, CtaConfig } from './types.js';
+import type { ContentBlock, CtaConfig, LinkItem, FaqItem } from './types.js';
+export type { LinkItem, FaqItem };
 /** 从候选字段中取第一个非空字符串（空串不能短路，否则会丢掉后面的真实内容） */
 export declare function firstNonEmpty(...vals: unknown[]): string;
 export declare function extractJson(text: string): unknown;
@@ -24,13 +25,6 @@ export declare function readingTime(blocks: ContentBlock[]): number;
 export declare function renderArticleBlocks(blocks: ContentBlock[]): string;
 /** 渲染底部 CTA 卡片 HTML（文案全可配置） */
 export declare function renderArticleCta(config: CtaConfig | undefined): string;
-/** 链接项 */
-export interface LinkItem {
-    id?: string | number;
-    label: string;
-    url: string;
-    kind?: string;
-}
 /** 渲染推广链接区（主按钮常显 + 更多折叠，opts 可覆盖全部文案/样式） */
 export declare function renderArticleLinks(links: unknown, opts?: {
     note?: string;
@@ -39,11 +33,6 @@ export declare function renderArticleLinks(links: unknown, opts?: {
     moreText?: string;
     adLabel?: string;
 }): string;
-/** FAQ 项 */
-export interface FaqItem {
-    q: string;
-    a: string;
-}
 /** 渲染 FAQ 面板（opts.mode='collapse' 折叠默认 / 'expand' 全展开） */
 export declare function renderFaqSection(faq: unknown, opts?: {
     mode?: 'collapse' | 'expand';

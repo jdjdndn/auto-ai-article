@@ -23,7 +23,12 @@ const utils_js_1 = require("./utils.js");
 async function runScheduledGenerate(cfg) {
     const { site, adminBase, dailyTarget = 3, cloudEndpoint = '/api/admin/run-daily-generate', cloudTriggerTimeoutMs = 15_000, apiTimeoutMs = 60_000, adminKeyFile, adminKey, dryRun = false, logger, publishDueDrafts, publishDueEndpoint = '/api/admin/publish-due', ...rest } = cfg;
     const log = logger || ((...a) => console.log(new Date().toISOString(), `[${site}]`, ...a));
-    const key = adminKey || (adminKeyFile ? (0, node_fs_1.readFileSync)(adminKeyFile, 'utf-8').trim().replace(/^MANAGE_KEY=/, '') : '');
+    const key = adminKey ||
+        (adminKeyFile
+            ? (0, node_fs_1.readFileSync)(adminKeyFile, 'utf-8')
+                .trim()
+                .replace(/^MANAGE_KEY=/, '')
+            : '');
     if (!key)
         throw new Error(`[${site}] 未配置 adminKey/adminKeyFile`);
     async function apiFetch(pathname, opts = {}, timeoutMs = apiTimeoutMs) {
@@ -83,7 +88,7 @@ async function runScheduledGenerate(cfg) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ articleId: articleId || null }),
-            }).catch(() => { });
+            }).catch((e) => log('标记素材完成失败:', e?.message || e));
         },
         async markSeedFailed(id, error) {
             if (dryRun)
@@ -92,7 +97,7 @@ async function runScheduledGenerate(cfg) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ error: String(error || '未知错误') }),
-            }).catch(() => { });
+            }).catch((e) => log('标记素材失败失败:', e?.message || e));
         },
         async insertArticles(articles) {
             if (dryRun) {
@@ -124,7 +129,7 @@ async function runScheduledGenerate(cfg) {
         const r = await apiFetch(publishDueEndpoint, { method: 'POST' });
         return r?.published || 0;
     }
-    const publishDue = publishDueDrafts === false ? undefined : (publishDueDrafts || publishDueDraftsDefault);
+    const publishDue = publishDueDrafts === false ? undefined : publishDueDrafts || publishDueDraftsDefault;
     // —— 运行日志上报（失败不阻塞流水线） ——
     async function reportRun(payload) {
         try {

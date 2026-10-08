@@ -7,12 +7,18 @@ import { spawn } from 'node:child_process'
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { withRetry } from './pipeline.js'
+import type { Logger } from './types.js'
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 
 /** 执行自愈命令（shell 模式，最多等 30s；命令自身不应阻塞，如内部用 Start-Process） */
 export async function runCommand(command: string, log: (...args: unknown[]) => void): Promise<void> {
   return new Promise((resolve) => {
+    if (typeof command !== 'string' || !command.trim()) {
+      log('自愈命令为空，跳过')
+      resolve()
+      return
+    }
     log(`执行自愈命令: ${command}`)
     let child: ReturnType<typeof spawn> | null = null
     try {
@@ -23,11 +29,21 @@ export async function runCommand(command: string, log: (...args: unknown[]) => v
       return
     }
     const timer = setTimeout(() => {
-      try { child?.kill() } catch { /* noop */ }
+      try {
+        child?.kill()
+      } catch {
+        /* noop */
+      }
       resolve()
     }, 30_000)
-    child.on('exit', () => { clearTimeout(timer); resolve() })
-    child.on('error', () => { clearTimeout(timer); resolve() })
+    child.on('exit', () => {
+      clearTimeout(timer)
+      resolve()
+    })
+    child.on('error', () => {
+      clearTimeout(timer)
+      resolve()
+    })
   })
 }
 
@@ -37,7 +53,7 @@ export function createLocalGatewayClient(config: {
   gateway: string
   models: string[]
   timeoutMs: number
-  logger?: (...args: unknown[]) => void
+  logger?: Logger
 }) {
   const log = config.logger || ((...args: unknown[]) => console.log(new Date().toISOString(), '[executor]', ...args))
   const models = config.models.length ? config.models : ['deepseek-chat']
@@ -78,7 +94,12 @@ export function createLocalGatewayClient(config: {
 // —— 跨进程/跨站互斥锁（原子 mkdir；带 owner.json 过期检测）——
 // 多站同机共用本地网关时，配置同一 localLockFile 即可全局串行化本地发文。
 
-export async function acquireLock(file: string, waitMs: number, staleMs: number, log: (...args: unknown[]) => void): Promise<boolean> {
+export async function acquireLock(
+  file: string,
+  waitMs: number,
+  staleMs: number,
+  log: (...args: unknown[]) => void,
+): Promise<boolean> {
   const deadline = Date.now() + waitMs
   for (;;) {
     try {
@@ -89,7 +110,9 @@ export async function acquireLock(file: string, waitMs: number, staleMs: number,
       try {
         const raw = readFileSync(join(file, 'owner.json'), 'utf-8').replace(/^\uFEFF/, '') // 容忍 BOM
         owner = JSON.parse(raw)
-      } catch { /* owner.json 缺失/损坏：不接管 */ }
+      } catch {
+        /* owner.json 缺失/损坏：不接管 */
+      }
       if (owner && typeof owner.ts === 'number' && Date.now() - owner.ts > staleMs) {
         log(`互斥锁已过期（${Math.round((Date.now() - owner.ts) / 1000)}s），强制接管`)
         rmSync(file, { recursive: true, force: true })
@@ -102,13 +125,19 @@ export async function acquireLock(file: string, waitMs: number, staleMs: number,
     }
     try {
       writeFileSync(join(file, 'owner.json'), JSON.stringify({ pid: process.pid, ts: Date.now() }))
-    } catch { /* noop */ }
+    } catch {
+      /* noop */
+    }
     return true
   }
 }
 
 export function releaseLock(file: string): void {
-  try { rmSync(file, { recursive: true, force: true }) } catch { /* noop */ }
+  try {
+    rmSync(file, { recursive: true, force: true })
+  } catch {
+    /* noop */
+  }
 }
 
 // —— 本地网关探测 ——
@@ -138,9 +167,7 @@ async function listLocalModels(gateway: string, timeoutMs: number): Promise<stri
   const data = await fetchJson(`${gateway}/models`, timeoutMs)
   const arr = Array.isArray(data?.data) ? data.data : null
   if (!arr) return []
-  return arr
-    .map((m: any) => String(m?.id || '').trim())
-    .filter(Boolean)
+  return arr.map((m: any) => String(m?.id || '').trim()).filter(Boolean)
 }
 
 /**

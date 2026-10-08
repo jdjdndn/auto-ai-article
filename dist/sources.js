@@ -34,13 +34,19 @@ function extractAttr(xml, tag, attr) {
     return m ? m[1] : '';
 }
 function stripHtml(html) {
-    return String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    return String(html || '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
 }
 function decodeHtml(s) {
     return String(s)
         .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
-        .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'");
 }
 /** fetch RSS feed 并解析为 item 数组 */
 async function fetchRssFeed(url, timeoutMs = 10000) {
@@ -62,11 +68,11 @@ function extractArticleText(html) {
     if (!html)
         return '';
     let body = html;
-    const articleMatch = html.match(/<article[^>]*>([\s\S]*?)<\/article>/i)
-        || html.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
+    const articleMatch = html.match(/<article[^>]*>([\s\S]*?)<\/article>/i) || html.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
     if (articleMatch)
         body = articleMatch[1];
-    body = body.replace(/<script[\s\S]*?<\/script>/gi, '')
+    body = body
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
         .replace(/<style[\s\S]*?<\/style>/gi, '')
         .replace(/<nav[\s\S]*?<\/nav>/gi, '')
         .replace(/<footer[\s\S]*?<\/footer>/gi, '');

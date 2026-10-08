@@ -42,7 +42,10 @@ const DEFAULT_OPTS: Required<RelatedOptions> = {
 // 中文按连续串切 2-gram，英文按词切小写；数字忽略（避免"2026""3 篇"类噪音）
 function tokens(text: string): Set<string> {
   const out = new Set<string>()
-  const cn = text.replace(/[^\u4e00-\u9fa5]/g, ' ').split(/\s+/).filter(Boolean)
+  const cn = text
+    .replace(/[^\u4e00-\u9fa5]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
   for (const seg of cn) {
     if (seg.length === 1) out.add(seg)
     else for (let i = 0; i < seg.length - 1; i++) out.add(seg.slice(i, i + 2))

@@ -17,6 +17,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 /** 执行自愈命令（shell 模式，最多等 30s；命令自身不应阻塞，如内部用 Start-Process） */
 async function runCommand(command, log) {
     return new Promise((resolve) => {
+        if (typeof command !== 'string' || !command.trim()) {
+            log('自愈命令为空，跳过');
+            resolve();
+            return;
+        }
         log(`执行自愈命令: ${command}`);
         let child = null;
         try {
@@ -31,11 +36,19 @@ async function runCommand(command, log) {
             try {
                 child?.kill();
             }
-            catch { /* noop */ }
+            catch {
+                /* noop */
+            }
             resolve();
         }, 30_000);
-        child.on('exit', () => { clearTimeout(timer); resolve(); });
-        child.on('error', () => { clearTimeout(timer); resolve(); });
+        child.on('exit', () => {
+            clearTimeout(timer);
+            resolve();
+        });
+        child.on('error', () => {
+            clearTimeout(timer);
+            resolve();
+        });
     });
 }
 // —— 本地 AI 网关客户端（复用公共 withRetry：慢启动重试 + 可配超时 + 模型轮换）——
@@ -87,7 +100,9 @@ async function acquireLock(file, waitMs, staleMs, log) {
                 const raw = (0, node_fs_1.readFileSync)((0, node_path_1.join)(file, 'owner.json'), 'utf-8').replace(/^\uFEFF/, ''); // 容忍 BOM
                 owner = JSON.parse(raw);
             }
-            catch { /* owner.json 缺失/损坏：不接管 */ }
+            catch {
+                /* owner.json 缺失/损坏：不接管 */
+            }
             if (owner && typeof owner.ts === 'number' && Date.now() - owner.ts > staleMs) {
                 log(`互斥锁已过期（${Math.round((Date.now() - owner.ts) / 1000)}s），强制接管`);
                 (0, node_fs_1.rmSync)(file, { recursive: true, force: true });
@@ -102,7 +117,9 @@ async function acquireLock(file, waitMs, staleMs, log) {
         try {
             (0, node_fs_1.writeFileSync)((0, node_path_1.join)(file, 'owner.json'), JSON.stringify({ pid: process.pid, ts: Date.now() }));
         }
-        catch { /* noop */ }
+        catch {
+            /* noop */
+        }
         return true;
     }
 }
@@ -110,7 +127,9 @@ function releaseLock(file) {
     try {
         (0, node_fs_1.rmSync)(file, { recursive: true, force: true });
     }
-    catch { /* noop */ }
+    catch {
+        /* noop */
+    }
 }
 async function fetchJson(url, timeoutMs) {
     try {
@@ -128,9 +147,7 @@ async function listLocalModels(gateway, timeoutMs) {
     const arr = Array.isArray(data?.data) ? data.data : null;
     if (!arr)
         return [];
-    return arr
-        .map((m) => String(m?.id || '').trim())
-        .filter(Boolean);
+    return arr.map((m) => String(m?.id || '').trim()).filter(Boolean);
 }
 /**
  * 探测本地网关。

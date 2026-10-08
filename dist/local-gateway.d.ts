@@ -1,10 +1,11 @@
+import type { Logger } from './types.js';
 /** 执行自愈命令（shell 模式，最多等 30s；命令自身不应阻塞，如内部用 Start-Process） */
 export declare function runCommand(command: string, log: (...args: unknown[]) => void): Promise<void>;
 export declare function createLocalGatewayClient(config: {
     gateway: string;
     models: string[];
     timeoutMs: number;
-    logger?: (...args: unknown[]) => void;
+    logger?: Logger;
 }): (messages: Array<{
     role: string;
     content: string;

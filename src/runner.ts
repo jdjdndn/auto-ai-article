@@ -17,7 +17,8 @@ import type { PipelineDB } from './pipeline.js'
 import type { RunLogInput } from './types.js'
 import { cnTodayStartISO } from './utils.js'
 
-export interface SiteRunnerConfig extends Omit<ExecutorConfig, 'cloudFallback' | 'getPublishedToday' | 'reportRun' | 'publishDueDrafts'> {
+export interface SiteRunnerConfig
+  extends Omit<ExecutorConfig, 'cloudFallback' | 'getPublishedToday' | 'reportRun' | 'publishDueDrafts'> {
   /** 站点标识（日志前缀） */
   site: string
   /** 线上站点 API 基址（如 https://www.wcbblll.cc） */
@@ -67,7 +68,13 @@ export async function runScheduledGenerate(cfg: SiteRunnerConfig): Promise<SiteR
   } = cfg
 
   const log = logger || ((...a: unknown[]) => console.log(new Date().toISOString(), `[${site}]`, ...a))
-  const key = adminKey || (adminKeyFile ? readFileSync(adminKeyFile, 'utf-8').trim().replace(/^MANAGE_KEY=/, '') : '')
+  const key =
+    adminKey ||
+    (adminKeyFile
+      ? readFileSync(adminKeyFile, 'utf-8')
+          .trim()
+          .replace(/^MANAGE_KEY=/, '')
+      : '')
   if (!key) throw new Error(`[${site}] 未配置 adminKey/adminKeyFile`)
 
   async function apiFetch(pathname: string, opts: RequestInit = {}, timeoutMs: number = apiTimeoutMs): Promise<any> {
@@ -125,7 +132,7 @@ export async function runScheduledGenerate(cfg: SiteRunnerConfig): Promise<SiteR
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ articleId: articleId || null }),
-      }).catch(() => {})
+      }).catch((e) => log('标记素材完成失败:', (e as Error)?.message || e))
     },
     async markSeedFailed(id, error) {
       if (dryRun) return
@@ -133,7 +140,7 @@ export async function runScheduledGenerate(cfg: SiteRunnerConfig): Promise<SiteR
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ error: String(error || '未知错误') }),
-      }).catch(() => {})
+      }).catch((e) => log('标记素材失败失败:', (e as Error)?.message || e))
     },
     async insertArticles(articles) {
       if (dryRun) {
@@ -167,7 +174,7 @@ export async function runScheduledGenerate(cfg: SiteRunnerConfig): Promise<SiteR
     const r = await apiFetch(publishDueEndpoint, { method: 'POST' })
     return r?.published || 0
   }
-  const publishDue = publishDueDrafts === false ? undefined : (publishDueDrafts || publishDueDraftsDefault)
+  const publishDue = publishDueDrafts === false ? undefined : publishDueDrafts || publishDueDraftsDefault
 
   // —— 运行日志上报（失败不阻塞流水线） ——
   async function reportRun(payload: RunLogInput): Promise<void> {

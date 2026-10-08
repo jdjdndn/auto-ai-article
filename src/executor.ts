@@ -7,6 +7,7 @@
 import type { PipelineConfig, PipelineRunResult, RunLogInput } from './types.js'
 import { createPipeline, type PipelineDB } from './pipeline.js'
 import type { LocalGatewayProbe } from './local-gateway.js'
+import { aggregateStats, renderStatsMarkdown, type RunLogEntry } from './stats.js'
 export type { LocalGatewayProbe }
 
 // —— 执行器配置 ——
@@ -55,7 +56,9 @@ export interface ExecutorConfig extends PipelineConfig {
    * 返回后视为已处理，不再本地生成，也**不**再本地上报 run-logs（由兜底实现方负责）。
    * 缺省时保持原 skip 行为。
    */
-  cloudFallback?: (ctx: { localGateway: string; dryRun: boolean }) => Promise<{ ok: boolean; message?: string } | void>
+  cloudFallback?: (ctx: { localGateway: string; dryRun: boolean }) => Promise<
+    { ok: boolean; message?: string } | undefined
+  >
   /** dry-run 模式：只生成不入库 */
   dryRun?: boolean
   /** 今日已发布篇数查询函数 */
@@ -64,8 +67,8 @@ export interface ExecutorConfig extends PipelineConfig {
   hasLocalRunToday?: () => Promise<boolean>
   /** 运行日志上报函数 */
   reportRun?: (log: RunLogInput) => Promise<void>
-  /** 自定义 logger（默认 console.log） */
-  logger?: (...args: unknown[]) => void
+  /** 获取历史运行日志（运行结束后聚合统计面板输出） */
+  fetchRunLogs?: () => Promise<RunLogEntry[]>
 }
 
 export interface ExecutorResult {
@@ -121,9 +124,7 @@ export async function execute(db: PipelineDB, config: ExecutorConfig = {}): Prom
 
   // 3. 检查本地网关（已提供云端 client 时跳过，Workers/线上环境无本地网关）
   //    惰性加载 local-gateway：纯云端站（config.ai.client 已提供）不 require，零开销
-  const lg: typeof import('./local-gateway.js') | null = config.ai?.client
-    ? null
-    : require('./local-gateway.js')
+  const lg: typeof import('./local-gateway.js') | null = config.ai?.client ? null : require('./local-gateway.js')
   let probe: LocalGatewayProbe | null = lg ? await lg.probeLocalGateway(localGateway) : null
   let localOnline = probe ? probe.online : false
 
@@ -195,7 +196,12 @@ export async function execute(db: PipelineDB, config: ExecutorConfig = {}): Prom
     log(`使用本地网关 ${localGateway}，模型候选 ${localModels.join(' -> ')}`)
     pipelineConfig.ai = {
       ...pipelineConfig.ai,
-      client: lg!.createLocalGatewayClient({ gateway: localGateway, models: localModels, timeoutMs: localTimeoutMs, logger: log }),
+      client: lg!.createLocalGatewayClient({
+        gateway: localGateway,
+        models: localModels,
+        timeoutMs: localTimeoutMs,
+        logger: log,
+      }),
       model: localModels[0],
     }
   } else {
@@ -239,7 +245,22 @@ export async function execute(db: PipelineDB, config: ExecutorConfig = {}): Prom
             error: result.errors.length ? result.errors.join('; ').slice(0, 300) : null,
             dryRun,
           })
-        } catch { /* 日志失败不阻塞 */ }
+        } catch {
+          /* 日志失败不阻塞 */
+        }
+      }
+
+      // 7. 统计面板（运行结束后聚合历史日志，结尾汇总关键指标）
+      if (config.fetchRunLogs) {
+        try {
+          const logs = await config.fetchRunLogs()
+          if (logs.length) {
+            const summary = aggregateStats(logs)
+            log(`\n${renderStatsMarkdown(summary)}`)
+          }
+        } catch (e: any) {
+          log('[warn] 统计面板生成失败：', e.message)
+        }
       }
 
       return { mode: localOnline ? 'local' : 'cloud', pipeline: result }
@@ -259,7 +280,9 @@ export async function execute(db: PipelineDB, config: ExecutorConfig = {}): Prom
           error: e.message?.slice(0, 300),
           dryRun,
         })
-      } catch { /* noop */ }
+      } catch {
+        /* noop */
+      }
     }
     throw e
   }

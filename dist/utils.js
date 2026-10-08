@@ -54,13 +54,17 @@ function extractJson(text) {
     try {
         return JSON.parse(t);
     }
-    catch { /* fallthrough */ }
+    catch {
+        /* fallthrough */
+    }
     const mc = t.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (mc) {
         try {
             return JSON.parse(mc[1].trim());
         }
-        catch { /* fallthrough */ }
+        catch {
+            /* fallthrough */
+        }
     }
     const start = t.indexOf('{');
     const end = t.lastIndexOf('}');
@@ -68,7 +72,9 @@ function extractJson(text) {
         try {
             return JSON.parse(t.slice(start, end + 1));
         }
-        catch { /* fallthrough */ }
+        catch {
+            /* fallthrough */
+        }
     }
     // 尝试提取数组（兼容全角括号）
     // 注意：只在最外层没有半角 [] 时才尝试全角，避免破坏 JSON 字符串里的全角括号
@@ -79,7 +85,7 @@ function extractJson(text) {
         const fwStart = t.indexOf('［');
         const fwEnd = t.lastIndexOf('］');
         if (fwStart === 0 && fwEnd > 0 && fwEnd === t.length - 1) {
-            t = '[' + t.slice(1, -1) + ']';
+            t = `[${t.slice(1, -1)}]`;
             arrStart = 0;
             arrEnd = t.length - 1;
         }
@@ -88,7 +94,9 @@ function extractJson(text) {
         try {
             return JSON.parse(t.slice(arrStart, arrEnd + 1));
         }
-        catch { /* fallthrough */ }
+        catch {
+            /* fallthrough */
+        }
     }
     return null;
 }
@@ -165,14 +173,16 @@ function asDisplayString(v, fallback = '') {
 }
 /** 把 list items 拍平为字符串数组，禁止 [object Object] */
 function flattenListItems(items) {
-    return (Array.isArray(items) ? items : []).map((it) => {
+    return (Array.isArray(items) ? items : [])
+        .map((it) => {
         if (typeof it === 'string')
             return it;
         if (it && typeof it === 'object') {
             return asDisplayString(it.text ?? it.name ?? it.label ?? it.item) || JSON.stringify(it);
         }
         return String(it ?? '');
-    }).filter(Boolean);
+    })
+        .filter(Boolean);
 }
 /** 把 price 块字段拍平为字符串，兼容 AI 输出嵌套对象 */
 function flattenPriceBlock(b) {
@@ -220,14 +230,16 @@ function flattenTypedBlock(b) {
         const items = Array.isArray(b.items) ? b.items : Array.isArray(b.list) ? b.list : b.list?.items;
         return {
             type: 'list',
-            items: (Array.isArray(items) ? items : []).map((it) => {
+            items: (Array.isArray(items) ? items : [])
+                .map((it) => {
                 if (typeof it === 'string')
                     return it;
                 if (it && typeof it === 'object') {
                     return asDisplayString(it.text ?? it.name ?? it.label ?? it.item) || JSON.stringify(it);
                 }
                 return String(it ?? '');
-            }).filter(Boolean),
+            })
+                .filter(Boolean),
         };
     }
     return b;
@@ -268,28 +280,32 @@ function normalizeContentBlocks(raw) {
             const items = Array.isArray(b.list) ? b.list : b.list?.items;
             out.push({
                 type: 'list',
-                items: (Array.isArray(items) ? items : []).map((it) => {
+                items: (Array.isArray(items) ? items : [])
+                    .map((it) => {
                     if (typeof it === 'string')
                         return it;
                     if (it && typeof it === 'object') {
                         return asDisplayString(it.text ?? it.name ?? it.label ?? it.item) || JSON.stringify(it);
                     }
                     return String(it ?? '');
-                }).filter(Boolean),
+                })
+                    .filter(Boolean),
             });
             continue;
         }
         if (Array.isArray(b.items)) {
             out.push({
                 type: 'list',
-                items: b.items.map((it) => {
+                items: b.items
+                    .map((it) => {
                     if (typeof it === 'string')
                         return it;
                     if (it && typeof it === 'object') {
                         return asDisplayString(it.text ?? it.name ?? it.label ?? it.item) || JSON.stringify(it);
                     }
                     return String(it ?? '');
-                }).filter(Boolean),
+                })
+                    .filter(Boolean),
             });
             continue;
         }
@@ -474,9 +490,7 @@ function generateToc(blocks) {
         .map((b, i) => ({ text: b.text.trim(), id: `h2-${i}` }));
     if (headings.length < 3)
         return '';
-    return `<details class="article-toc"><summary class="toc-title">本文目录</summary><ul>` +
-        headings.map((h) => `<li><a href="#${h.id}">${escapeHtml(h.text)}</a></li>`).join('') +
-        `</ul></details>`;
+    return `<details class="article-toc"><summary class="toc-title">本文目录</summary><ul>${headings.map((h) => `<li><a href="#${h.id}">${escapeHtml(h.text)}</a></li>`).join('')}</ul></details>`;
 }
 /** 估算阅读时长（中文 300 字/分钟），返回分钟数 */
 function readingTime(blocks) {
@@ -487,8 +501,11 @@ function readingTime(blocks) {
         if (typeof b?.text === 'string')
             chars += b.text.length;
         if (Array.isArray(b?.items)) {
-            b.items.forEach((i) => { if (typeof i === 'string')
-                chars += i.length; });
+            ;
+            b.items.forEach((i) => {
+                if (typeof i === 'string')
+                    chars += i.length;
+            });
         }
     }
     return Math.max(1, Math.round(chars / 300));
@@ -509,35 +526,29 @@ function renderBlock(block, h2Idx) {
                 .map((item) => `<p class="list-item">${escapeHtml(item)}</p>`)
                 .join('')}</div>`;
         case 'price':
-            return `<div class="block-price"><span class="price">¥${escapeHtml(block.price)}</span>` +
-                (block.original ? `<span class="original">¥${escapeHtml(block.original)}</span>` : '') +
-                (block.spec ? `<span class="spec">${escapeHtml(block.spec)}</span>` : '') +
-                `</div>`;
+            return `<div class="block-price"><span class="price">¥${escapeHtml(block.price)}</span>${block.original ? `<span class="original">¥${escapeHtml(block.original)}</span>` : ''}${block.spec ? `<span class="spec">${escapeHtml(block.spec)}</span>` : ''}</div>`;
         case 'quote':
             return `<div class="block-quote ${block.tone === 'warn' ? 'warn' : 'info'}">${escapeHtml(block.text)}</div>`;
         case 'image': {
             const url = block.url || '';
             if (/example\.com|test\.com|placeholder/.test(url))
                 return ''; // 占位图丢弃
-            return `<figure class="block-image"><img src="${escapeHtml(url)}" alt="${escapeHtml(block.alt || '')}" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'" />` +
-                `<figcaption>${block.caption ? escapeHtml(block.caption) + ' · ' : ''}图源：网络</figcaption></figure>`;
+            return (`<figure class="block-image"><img src="${escapeHtml(url)}" alt="${escapeHtml(block.alt || '')}" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'" />` +
+                `<figcaption>${block.caption ? `${escapeHtml(block.caption)} · ` : ''}图源：网络</figcaption></figure>`);
         }
         case 'video': {
             const url = block.url || '';
             if (/example\.com|test\.com|placeholder/.test(url))
                 return '';
-            return `<figure class="block-image"><video src="${escapeHtml(url)}" controls preload="metadata" style="width:100%;border-radius:12px;display:block"></video>` +
-                (block.title ? `<figcaption>${escapeHtml(block.title)}</figcaption>` : '') +
-                `</figure>`;
+            return `<figure class="block-image"><video src="${escapeHtml(url)}" controls preload="metadata" style="width:100%;border-radius:12px;display:block"></video>${block.title ? `<figcaption>${escapeHtml(block.title)}</figcaption>` : ''}</figure>`;
         }
         case 'ad': {
             // 占位链接的 ad block 整个丢弃
             if (block.link && /example\.com|test\.com|placeholder|yourlink/.test(block.link))
                 return '';
-            return `<div class="ad-block"><span class="ad-label">${escapeHtml(block.label || '推荐')}</span>` +
-                `<p>${escapeHtml(block.text)}</p>` +
-                (block.link ? `<a href="${escapeHtml(block.link)}" target="_blank" rel="noopener nofollow" class="ad-link">去看看 →</a>` : '') +
-                `</div>`;
+            return `<div class="ad-block"><span class="ad-label">${escapeHtml(block.label || '推荐')}</span><p>${escapeHtml(block.text)}</p>${block.link
+                ? `<a href="${escapeHtml(block.link)}" target="_blank" rel="noopener nofollow" class="ad-link">去看看 →</a>`
+                : ''}</div>`;
         }
         default:
             return '';
@@ -569,6 +580,9 @@ function renderArticleCta(config) {
     html += `</div></section>`;
     return html;
 }
+// ============================================================
+// 文章页周边组件：链接区 / FAQ / 分享栏（纯 HTML，事件用 data-action 委托）
+// ============================================================
 /** 渲染推广链接区（主按钮常显 + 更多折叠，opts 可覆盖全部文案/样式） */
 function renderArticleLinks(links, opts = {}) {
     if (!Array.isArray(links) || !links.length)
@@ -643,7 +657,8 @@ function renderShareBar(article, opts = {}) {
 function articleJsonLd(article, site) {
     const articleUrl = `${site.url}/article/${article.id}`;
     const cover = article.firstImage || `${site.url}/favicon.ico`;
-    const ld = [{
+    const ld = [
+        {
             '@context': 'https://schema.org',
             '@type': 'Article',
             headline: article.title,
@@ -661,7 +676,8 @@ function articleJsonLd(article, site) {
                 logo: { '@type': 'ImageObject', url: site.logo || cover },
             },
             mainEntityOfPage: { '@type': 'WebPage', '@id': articleUrl },
-        }];
+        },
+    ];
     if (article.faq?.length) {
         ld.push({
             '@context': 'https://schema.org',
@@ -673,7 +689,7 @@ function articleJsonLd(article, site) {
             })),
         });
     }
-    return JSON.stringify(ld);
+    return JSON.stringify(ld).replace(/</g, '\\u003c');
 }
 // ============================================================
 // SEO JSON-LD 通用函数（参数化站点信息）
@@ -778,9 +794,7 @@ function initArticleActions(root = document, opts = {}) {
             const list = t.parentElement?.querySelector('.more-list');
             if (list)
                 list.toggleAttribute('hidden');
-            t.textContent = list?.hasAttribute('hidden')
-                ? `${t.textContent?.replace(/（.*?）/, '').trim()}`
-                : '收起';
+            t.textContent = list?.hasAttribute('hidden') ? `${t.textContent?.replace(/（.*?）/, '').trim()}` : '收起';
         }
     });
     // 复制链接
@@ -795,7 +809,9 @@ function initArticleActions(root = document, opts = {}) {
                 t.textContent = '已复制';
                 setTimeout(() => (t.textContent = '复制链接'), 2000);
             }
-            catch { /* 忽略 */ }
+            catch {
+                /* 忽略 */
+            }
         }
     });
     // 纠错

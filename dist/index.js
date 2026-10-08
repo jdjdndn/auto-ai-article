@@ -3,8 +3,8 @@
 // ai-article-pipeline — 统一导出
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createAiClient = exports.createCloudflareAiClient = exports.createFallbackClient = exports.createScheduledPlugin = exports.createDailyAlarmPlugin = exports.applyWorkerEnv = exports.rescheduleDoAlarm = exports.initDoAlarm = exports.getNextAlarmTime = exports.startScheduler = exports.ArticleScheduler = exports.computeRelatedArticles = exports.runScheduledGenerate = exports.execute = exports.createPipeline = exports.replaceViolatingWords = exports.checkArticleSafety = exports.scanText = exports.normalizeText = exports.textSimilarity = exports.extractArticleText = exports.fetchRssFeed = exports.cnTodayStartISO = exports.safeArticle = exports.flattenLinks = exports.flattenFaq = exports.flattenToStrings = exports.renderShareBar = exports.renderFaqSection = exports.renderRelatedArticles = exports.renderArticleLinks = exports.articleCss = exports.readingTime = exports.generateToc = exports.renderArticleCta = exports.renderArticleBlocks = exports.escapeHtml = exports.normalizeContentBlocks = exports.asAnyArray = exports.firstNonEmpty = exports.firstImageOf = exports.normalizeJson = exports.safeJson = exports.extractJson = exports.runLogs = exports.seeds = exports.articles = exports.aiSuggestPrompt = exports.aiSystemPrompt = exports.dateContext = void 0;
-exports.getSiteDefaultModel = exports.SITE_DEFAULT_MODELS = exports.FALLBACK_PROVIDERS = exports.extractResponse = exports.getQuotaExhaustedModels = exports.resetQuotaState = exports.OPENROUTER_FREE_MODELS = exports.FREE_TEXT_MODELS = exports.getRecommendedModels = exports.createOpenRouterClient = void 0;
+exports.initDoAlarm = exports.getNextAlarmTime = exports.startScheduler = exports.ArticleScheduler = exports.computeRelatedArticles = exports.runScheduledGenerate = exports.execute = exports.withRetry = exports.createPipeline = exports.replaceViolatingWords = exports.checkArticleSafety = exports.scanText = exports.normalizeText = exports.textSimilarity = exports.extractArticleText = exports.fetchRssFeed = exports.cnTodayStartISO = exports.safeArticle = exports.flattenLinks = exports.flattenFaq = exports.flattenToStrings = exports.initArticleActions = exports.faqJsonLd = exports.productJsonLd = exports.websiteJsonLd = exports.organizationJsonLd = exports.articleJsonLd = exports.renderShareBar = exports.renderFaqSection = exports.renderRelatedArticles = exports.renderArticleLinks = exports.articleCss = exports.readingTime = exports.generateToc = exports.renderArticleCta = exports.renderArticleBlocks = exports.escapeHtml = exports.normalizeContentBlocks = exports.asAnyArray = exports.firstNonEmpty = exports.firstImageOf = exports.normalizeJson = exports.safeJson = exports.extractJson = exports.runLogs = exports.seeds = exports.articles = exports.aiSuggestPrompt = exports.aiSystemPrompt = exports.dateContext = void 0;
+exports.renderStatsMarkdown = exports.aggregateStats = exports.injectSearchTerms = exports.fetchSearchConsoleTerms = exports.scoreArticle = exports.getSiteDefaultModel = exports.SITE_DEFAULT_MODELS = exports.FALLBACK_PROVIDERS = exports.extractResponse = exports.getQuotaExhaustedModels = exports.resetQuotaState = exports.OPENROUTER_FREE_MODELS = exports.FREE_TEXT_MODELS = exports.getRecommendedModels = exports.createOpenRouterClient = exports.createAiClient = exports.createCloudflareAiClient = exports.createFallbackClient = exports.createScheduledPlugin = exports.createDailyAlarmPlugin = exports.applyWorkerEnv = exports.rescheduleDoAlarm = void 0;
 // 提示词
 var prompts_js_1 = require("./prompts.js");
 Object.defineProperty(exports, "dateContext", { enumerable: true, get: function () { return prompts_js_1.dateContext; } });
@@ -34,6 +34,12 @@ Object.defineProperty(exports, "renderArticleLinks", { enumerable: true, get: fu
 Object.defineProperty(exports, "renderRelatedArticles", { enumerable: true, get: function () { return utils_js_1.renderRelatedArticles; } });
 Object.defineProperty(exports, "renderFaqSection", { enumerable: true, get: function () { return utils_js_1.renderFaqSection; } });
 Object.defineProperty(exports, "renderShareBar", { enumerable: true, get: function () { return utils_js_1.renderShareBar; } });
+Object.defineProperty(exports, "articleJsonLd", { enumerable: true, get: function () { return utils_js_1.articleJsonLd; } });
+Object.defineProperty(exports, "organizationJsonLd", { enumerable: true, get: function () { return utils_js_1.organizationJsonLd; } });
+Object.defineProperty(exports, "websiteJsonLd", { enumerable: true, get: function () { return utils_js_1.websiteJsonLd; } });
+Object.defineProperty(exports, "productJsonLd", { enumerable: true, get: function () { return utils_js_1.productJsonLd; } });
+Object.defineProperty(exports, "faqJsonLd", { enumerable: true, get: function () { return utils_js_1.faqJsonLd; } });
+Object.defineProperty(exports, "initArticleActions", { enumerable: true, get: function () { return utils_js_1.initArticleActions; } });
 Object.defineProperty(exports, "flattenToStrings", { enumerable: true, get: function () { return utils_js_1.flattenToStrings; } });
 Object.defineProperty(exports, "flattenFaq", { enumerable: true, get: function () { return utils_js_1.flattenFaq; } });
 Object.defineProperty(exports, "flattenLinks", { enumerable: true, get: function () { return utils_js_1.flattenLinks; } });
@@ -53,6 +59,7 @@ Object.defineProperty(exports, "replaceViolatingWords", { enumerable: true, get:
 // 管线
 var pipeline_js_1 = require("./pipeline.js");
 Object.defineProperty(exports, "createPipeline", { enumerable: true, get: function () { return pipeline_js_1.createPipeline; } });
+Object.defineProperty(exports, "withRetry", { enumerable: true, get: function () { return pipeline_js_1.withRetry; } });
 // 执行器
 var executor_js_1 = require("./executor.js");
 Object.defineProperty(exports, "execute", { enumerable: true, get: function () { return executor_js_1.execute; } });
@@ -89,3 +96,14 @@ var ai_config_js_1 = require("./ai-config.js");
 Object.defineProperty(exports, "FALLBACK_PROVIDERS", { enumerable: true, get: function () { return ai_config_js_1.FALLBACK_PROVIDERS; } });
 Object.defineProperty(exports, "SITE_DEFAULT_MODELS", { enumerable: true, get: function () { return ai_config_js_1.SITE_DEFAULT_MODELS; } });
 Object.defineProperty(exports, "getSiteDefaultModel", { enumerable: true, get: function () { return ai_config_js_1.getSiteDefaultModel; } });
+// 文章质量评分（信息密度/套话密度/结构完整性/原创性）
+var article_quality_js_1 = require("./article-quality.js");
+Object.defineProperty(exports, "scoreArticle", { enumerable: true, get: function () { return article_quality_js_1.scoreArticle; } });
+// 搜索词采集（Google Search Console API + 注入选题）
+var search_terms_js_1 = require("./search-terms.js");
+Object.defineProperty(exports, "fetchSearchConsoleTerms", { enumerable: true, get: function () { return search_terms_js_1.fetchSearchConsoleTerms; } });
+Object.defineProperty(exports, "injectSearchTerms", { enumerable: true, get: function () { return search_terms_js_1.injectSearchTerms; } });
+// 生成统计聚合（成功率/失败分布/平台稳定性/每日趋势）
+var stats_js_1 = require("./stats.js");
+Object.defineProperty(exports, "aggregateStats", { enumerable: true, get: function () { return stats_js_1.aggregateStats; } });
+Object.defineProperty(exports, "renderStatsMarkdown", { enumerable: true, get: function () { return stats_js_1.renderStatsMarkdown; } });

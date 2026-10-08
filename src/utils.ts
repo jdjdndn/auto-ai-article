@@ -2,7 +2,8 @@
 // 工具函数 — 从 article-site/shared/ai-utils.mjs + content.ts 提取
 // ============================================================
 
-import type { ContentBlock, CtaConfig } from './types.js'
+import type { ContentBlock, CtaConfig, LinkItem, FaqItem } from './types.js'
+export type { LinkItem, FaqItem }
 
 // —— JSON 提取（容忍 markdown 代码块包裹 / 前后多余文字）——
 
@@ -23,15 +24,27 @@ export function extractJson(text: string): unknown {
     .replace(/【think】[\s\S]*?【\/think】/gi, '')
     .trim()
   if (!t) return null
-  try { return JSON.parse(t) } catch { /* fallthrough */ }
+  try {
+    return JSON.parse(t)
+  } catch {
+    /* fallthrough */
+  }
   const mc = t.match(/```(?:json)?\s*([\s\S]*?)```/)
   if (mc) {
-    try { return JSON.parse(mc[1].trim()) } catch { /* fallthrough */ }
+    try {
+      return JSON.parse(mc[1].trim())
+    } catch {
+      /* fallthrough */
+    }
   }
   const start = t.indexOf('{')
   const end = t.lastIndexOf('}')
   if (start >= 0 && end > start) {
-    try { return JSON.parse(t.slice(start, end + 1)) } catch { /* fallthrough */ }
+    try {
+      return JSON.parse(t.slice(start, end + 1))
+    } catch {
+      /* fallthrough */
+    }
   }
   // 尝试提取数组（兼容全角括号）
   // 注意：只在最外层没有半角 [] 时才尝试全角，避免破坏 JSON 字符串里的全角括号
@@ -42,13 +55,17 @@ export function extractJson(text: string): unknown {
     const fwStart = t.indexOf('［')
     const fwEnd = t.lastIndexOf('］')
     if (fwStart === 0 && fwEnd > 0 && fwEnd === t.length - 1) {
-      t = '[' + t.slice(1, -1) + ']'
+      t = `[${t.slice(1, -1)}]`
       arrStart = 0
       arrEnd = t.length - 1
     }
   }
   if (arrStart >= 0 && arrEnd > arrStart) {
-    try { return JSON.parse(t.slice(arrStart, arrEnd + 1)) } catch { /* fallthrough */ }
+    try {
+      return JSON.parse(t.slice(arrStart, arrEnd + 1))
+    } catch {
+      /* fallthrough */
+    }
   }
   return null
 }
@@ -76,16 +93,28 @@ export function asAnyArray(parsed: unknown): unknown[] | null {
 /** 安全 JSON 解析 */
 export function safeJson(s: string | null | undefined, fallback: unknown = []): unknown {
   if (!s) return fallback
-  try { return JSON.parse(s) } catch { return fallback }
+  try {
+    return JSON.parse(s)
+  } catch {
+    return fallback
+  }
 }
 
 /** JSON 字段归一化：任意值 → 紧凑 JSON 字符串；空 → '[]' */
 export function normalizeJson(v: unknown): string | null {
   if (v == null || v === '') return '[]'
   if (typeof v === 'string') {
-    try { return JSON.stringify(JSON.parse(v)) } catch { return null }
+    try {
+      return JSON.stringify(JSON.parse(v))
+    } catch {
+      return null
+    }
   }
-  try { return JSON.stringify(v) } catch { return null }
+  try {
+    return JSON.stringify(v)
+  } catch {
+    return null
+  }
 }
 
 /** 从 content 块数组提取第一个 image 块 URL */
@@ -108,13 +137,15 @@ function asDisplayString(v: unknown, fallback = ''): string {
 
 /** 把 list items 拍平为字符串数组，禁止 [object Object] */
 function flattenListItems(items: unknown): string[] {
-  return (Array.isArray(items) ? items : []).map((it: any) => {
-    if (typeof it === 'string') return it
-    if (it && typeof it === 'object') {
-      return asDisplayString(it.text ?? it.name ?? it.label ?? it.item) || JSON.stringify(it)
-    }
-    return String(it ?? '')
-  }).filter(Boolean)
+  return (Array.isArray(items) ? items : [])
+    .map((it: any) => {
+      if (typeof it === 'string') return it
+      if (it && typeof it === 'object') {
+        return asDisplayString(it.text ?? it.name ?? it.label ?? it.item) || JSON.stringify(it)
+      }
+      return String(it ?? '')
+    })
+    .filter(Boolean)
 }
 
 /** 把 price 块字段拍平为字符串，兼容 AI 输出嵌套对象 */
@@ -161,13 +192,15 @@ function flattenTypedBlock(b: any): any {
     const items = Array.isArray(b.items) ? b.items : Array.isArray(b.list) ? b.list : b.list?.items
     return {
       type: 'list' as const,
-      items: (Array.isArray(items) ? items : []).map((it: any) => {
-        if (typeof it === 'string') return it
-        if (it && typeof it === 'object') {
-          return asDisplayString(it.text ?? it.name ?? it.label ?? it.item) || JSON.stringify(it)
-        }
-        return String(it ?? '')
-      }).filter(Boolean),
+      items: (Array.isArray(items) ? items : [])
+        .map((it: any) => {
+          if (typeof it === 'string') return it
+          if (it && typeof it === 'object') {
+            return asDisplayString(it.text ?? it.name ?? it.label ?? it.item) || JSON.stringify(it)
+          }
+          return String(it ?? '')
+        })
+        .filter(Boolean),
     }
   }
 
@@ -210,26 +243,30 @@ export function normalizeContentBlocks(raw: unknown): ContentBlock[] {
       const items = Array.isArray(b.list) ? b.list : b.list?.items
       out.push({
         type: 'list',
-        items: (Array.isArray(items) ? items : []).map((it: any) => {
-          if (typeof it === 'string') return it
-          if (it && typeof it === 'object') {
-            return asDisplayString(it.text ?? it.name ?? it.label ?? it.item) || JSON.stringify(it)
-          }
-          return String(it ?? '')
-        }).filter(Boolean),
+        items: (Array.isArray(items) ? items : [])
+          .map((it: any) => {
+            if (typeof it === 'string') return it
+            if (it && typeof it === 'object') {
+              return asDisplayString(it.text ?? it.name ?? it.label ?? it.item) || JSON.stringify(it)
+            }
+            return String(it ?? '')
+          })
+          .filter(Boolean),
       })
       continue
     }
     if (Array.isArray(b.items)) {
       out.push({
         type: 'list',
-        items: b.items.map((it: any) => {
-          if (typeof it === 'string') return it
-          if (it && typeof it === 'object') {
-            return asDisplayString(it.text ?? it.name ?? it.label ?? it.item) || JSON.stringify(it)
-          }
-          return String(it ?? '')
-        }).filter(Boolean),
+        items: b.items
+          .map((it: any) => {
+            if (typeof it === 'string') return it
+            if (it && typeof it === 'object') {
+              return asDisplayString(it.text ?? it.name ?? it.label ?? it.item) || JSON.stringify(it)
+            }
+            return String(it ?? '')
+          })
+          .filter(Boolean),
       })
       continue
     }
@@ -244,15 +281,18 @@ export function normalizeContentBlocks(raw: unknown): ContentBlock[] {
     }
     // {ad: '...', text?, link?, label?}
     if (typeof b.ad === 'string' || b.label != null || (b.text != null && b.link != null)) {
-      const adText = b.ad != null && typeof b.ad === 'object'
-        ? asDisplayString((b.ad as any).text ?? (b.ad as any).content)
-        : asDisplayString(b.ad)
-      const labelText = b.label != null && typeof b.label === 'object'
-        ? asDisplayString((b.label as any).text)
-        : asDisplayString(b.label)
-      const bodyText = b.text != null && typeof b.text === 'object'
-        ? asDisplayString((b.text as any).text ?? (b.text as any).content)
-        : asDisplayString(b.text)
+      const adText =
+        b.ad != null && typeof b.ad === 'object'
+          ? asDisplayString((b.ad as any).text ?? (b.ad as any).content)
+          : asDisplayString(b.ad)
+      const labelText =
+        b.label != null && typeof b.label === 'object'
+          ? asDisplayString((b.label as any).text)
+          : asDisplayString(b.label)
+      const bodyText =
+        b.text != null && typeof b.text === 'object'
+          ? asDisplayString((b.text as any).text ?? (b.text as any).content)
+          : asDisplayString(b.text)
       out.push({
         type: 'ad',
         label: labelText || adText || '立即办理',
@@ -415,9 +455,7 @@ export function generateToc(blocks: ContentBlock[]): string {
     .filter((b: any) => b?.type === 'h2' && typeof b.text === 'string' && b.text.trim())
     .map((b: any, i: number) => ({ text: b.text.trim(), id: `h2-${i}` }))
   if (headings.length < 3) return ''
-  return `<details class="article-toc"><summary class="toc-title">本文目录</summary><ul>` +
-    headings.map((h) => `<li><a href="#${h.id}">${escapeHtml(h.text)}</a></li>`).join('') +
-    `</ul></details>`
+  return `<details class="article-toc"><summary class="toc-title">本文目录</summary><ul>${headings.map((h) => `<li><a href="#${h.id}">${escapeHtml(h.text)}</a></li>`).join('')}</ul></details>`
 }
 
 /** 估算阅读时长（中文 300 字/分钟），返回分钟数 */
@@ -427,7 +465,9 @@ export function readingTime(blocks: ContentBlock[]): number {
   for (const b of blocks) {
     if (typeof (b as any)?.text === 'string') chars += (b as any).text.length
     if (Array.isArray((b as any)?.items)) {
-      (b as any).items.forEach((i: any) => { if (typeof i === 'string') chars += i.length })
+      ;(b as any).items.forEach((i: any) => {
+        if (typeof i === 'string') chars += i.length
+      })
     }
   }
   return Math.max(1, Math.round(chars / 300))
@@ -448,32 +488,30 @@ function renderBlock(block: ContentBlock, h2Idx: { i: number }): string {
         .map((item) => `<p class="list-item">${escapeHtml(item)}</p>`)
         .join('')}</div>`
     case 'price':
-      return `<div class="block-price"><span class="price">¥${escapeHtml(block.price)}</span>` +
-        (block.original ? `<span class="original">¥${escapeHtml(block.original)}</span>` : '') +
-        (block.spec ? `<span class="spec">${escapeHtml(block.spec)}</span>` : '') +
-        `</div>`
+      return `<div class="block-price"><span class="price">¥${escapeHtml(block.price)}</span>${block.original ? `<span class="original">¥${escapeHtml(block.original)}</span>` : ''}${block.spec ? `<span class="spec">${escapeHtml(block.spec)}</span>` : ''}</div>`
     case 'quote':
       return `<div class="block-quote ${block.tone === 'warn' ? 'warn' : 'info'}">${escapeHtml(block.text)}</div>`
     case 'image': {
       const url = block.url || ''
-      if (/example\.com|test\.com|placeholder/.test(url)) return ''  // 占位图丢弃
-      return `<figure class="block-image"><img src="${escapeHtml(url)}" alt="${escapeHtml(block.alt || '')}" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'" />` +
-        `<figcaption>${block.caption ? escapeHtml(block.caption) + ' · ' : ''}图源：网络</figcaption></figure>`
+      if (/example\.com|test\.com|placeholder/.test(url)) return '' // 占位图丢弃
+      return (
+        `<figure class="block-image"><img src="${escapeHtml(url)}" alt="${escapeHtml(block.alt || '')}" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'" />` +
+        `<figcaption>${block.caption ? `${escapeHtml(block.caption)} · ` : ''}图源：网络</figcaption></figure>`
+      )
     }
     case 'video': {
       const url = block.url || ''
       if (/example\.com|test\.com|placeholder/.test(url)) return ''
-      return `<figure class="block-image"><video src="${escapeHtml(url)}" controls preload="metadata" style="width:100%;border-radius:12px;display:block"></video>` +
-        (block.title ? `<figcaption>${escapeHtml(block.title)}</figcaption>` : '') +
-        `</figure>`
+      return `<figure class="block-image"><video src="${escapeHtml(url)}" controls preload="metadata" style="width:100%;border-radius:12px;display:block"></video>${block.title ? `<figcaption>${escapeHtml(block.title)}</figcaption>` : ''}</figure>`
     }
     case 'ad': {
       // 占位链接的 ad block 整个丢弃
       if (block.link && /example\.com|test\.com|placeholder|yourlink/.test(block.link)) return ''
-      return `<div class="ad-block"><span class="ad-label">${escapeHtml(block.label || '推荐')}</span>` +
-        `<p>${escapeHtml(block.text)}</p>` +
-        (block.link ? `<a href="${escapeHtml(block.link)}" target="_blank" rel="noopener nofollow" class="ad-link">去看看 →</a>` : '') +
-        `</div>`
+      return `<div class="ad-block"><span class="ad-label">${escapeHtml(block.label || '推荐')}</span><p>${escapeHtml(block.text)}</p>${
+        block.link
+          ? `<a href="${escapeHtml(block.link)}" target="_blank" rel="noopener nofollow" class="ad-link">去看看 →</a>`
+          : ''
+      }</div>`
     }
     default:
       return ''
@@ -510,22 +548,17 @@ export function renderArticleCta(config: CtaConfig | undefined): string {
 // 文章页周边组件：链接区 / FAQ / 分享栏（纯 HTML，事件用 data-action 委托）
 // ============================================================
 
-/** 链接项 */
-export interface LinkItem {
-  id?: string | number
-  label: string
-  url: string
-  kind?: string  // 'more' = 收进折叠
-}
-
 /** 渲染推广链接区（主按钮常显 + 更多折叠，opts 可覆盖全部文案/样式） */
-export function renderArticleLinks(links: unknown, opts: {
-  note?: string           // 广告标注文案
-  hideNote?: boolean      // 隐藏广告标注
-  primaryClass?: string   // 主按钮 class（覆盖默认）
-  moreText?: string       // "更多"按钮文案
-  adLabel?: string        // 广告标签文字
-} = {}): string {
+export function renderArticleLinks(
+  links: unknown,
+  opts: {
+    note?: string // 广告标注文案
+    hideNote?: boolean // 隐藏广告标注
+    primaryClass?: string // 主按钮 class（覆盖默认）
+    moreText?: string // "更多"按钮文案
+    adLabel?: string // 广告标签文字
+  } = {},
+): string {
   if (!Array.isArray(links) || !links.length) return ''
   const main = (links as LinkItem[]).filter((l) => l.kind !== 'more')
   const more = (links as LinkItem[]).filter((l) => l.kind === 'more')
@@ -534,7 +567,8 @@ export function renderArticleLinks(links: unknown, opts: {
   const moreText = opts.moreText || '展开更多'
   const adLabel = opts.adLabel || '广告'
   let html = `<div class="article-links">`
-  if (!opts.hideNote) html += `<span class="ad-note"><b class="ad-badge">${escapeHtml(adLabel)}</b>${escapeHtml(note)}</span>`
+  if (!opts.hideNote)
+    html += `<span class="ad-note"><b class="ad-badge">${escapeHtml(adLabel)}</b>${escapeHtml(note)}</span>`
   for (const l of main) {
     if (!l.url || /example\.com|test\.com/.test(l.url)) continue
     html += `<a href="${escapeHtml(l.url)}" target="_blank" rel="noopener nofollow sponsored noreferrer" class="${btnClass}" data-track-click="${escapeHtml(l.id ? String(l.id) : '')}">${escapeHtml(l.label || '立即办理')}</a>`
@@ -551,17 +585,14 @@ export function renderArticleLinks(links: unknown, opts: {
   return html
 }
 
-/** FAQ 项 */
-export interface FaqItem {
-  q: string
-  a: string
-}
-
 /** 渲染 FAQ 面板（opts.mode='collapse' 折叠默认 / 'expand' 全展开） */
-export function renderFaqSection(faq: unknown, opts: {
-  mode?: 'collapse' | 'expand'   // 默认折叠
-  title?: string                 // 面板标题
-} = {}): string {
+export function renderFaqSection(
+  faq: unknown,
+  opts: {
+    mode?: 'collapse' | 'expand' // 默认折叠
+    title?: string // 面板标题
+  } = {},
+): string {
   if (!Array.isArray(faq) || !faq.length) return ''
   const title = opts.title || '常见问题'
   const mode = opts.mode || 'collapse'
@@ -579,9 +610,12 @@ export function renderFaqSection(faq: unknown, opts: {
 }
 
 /** 相关文章（related 列表渲染；数据由 computeRelatedArticles 计算或 API related_ids 提供） */
-export function renderRelatedArticles(related: unknown, opts: {
-  title?: string     // 模块标题（默认"相关文章"）
-} = {}): string {
+export function renderRelatedArticles(
+  related: unknown,
+  opts: {
+    title?: string // 模块标题（默认"相关文章"）
+  } = {},
+): string {
   if (!Array.isArray(related) || !related.length) return ''
   const title = opts.title || '相关文章'
   const items = (related as Array<{ id: string; title: string }>)
@@ -591,7 +625,10 @@ export function renderRelatedArticles(related: unknown, opts: {
   if (!items) return ''
   return `<section class="article-related"><h2 class="rel-title">${escapeHtml(title)}</h2><div class="rel-list">${items}</div></section>`
 }
-export function renderShareBar(article: { id: string; title: string; summary?: string }, opts: { shareUrl?: string } = {}): string {
+export function renderShareBar(
+  article: { id: string; title: string; summary?: string },
+  opts: { shareUrl?: string } = {},
+): string {
   const url = opts.shareUrl || ''
   return `<div class="share-bar">
     <button class="share-btn" data-action="copy-link" data-url="${escapeHtml(url)}" data-title="${escapeHtml(article.title)}" data-summary="${escapeHtml(article.summary || '')}">复制链接</button>
@@ -600,42 +637,47 @@ export function renderShareBar(article: { id: string; title: string; summary?: s
 }
 
 /** 生成 Article + FAQPage JSON-LD 结构化数据（SEO/GEO） */
-export function articleJsonLd(article: {
-  id: string
-  title: string
-  summary: string
-  createdAt: string
-  updatedAt?: string
-  category?: string
-  tags?: string[]
-  faq?: { q: string; a: string }[]
-  firstImage?: string
-}, site: {
-  name: string
-  url: string  // 站点根 URL，如 https://example.com
-  logo?: string
-}): string {
+export function articleJsonLd(
+  article: {
+    id: string
+    title: string
+    summary: string
+    createdAt: string
+    updatedAt?: string
+    category?: string
+    tags?: string[]
+    faq?: { q: string; a: string }[]
+    firstImage?: string
+  },
+  site: {
+    name: string
+    url: string // 站点根 URL，如 https://example.com
+    logo?: string
+  },
+): string {
   const articleUrl = `${site.url}/article/${article.id}`
   const cover = article.firstImage || `${site.url}/favicon.ico`
-  const ld: any[] = [{
-    '@context': 'https://schema.org',
-    '@type': 'Article',
-    headline: article.title,
-    description: article.summary,
-    url: articleUrl,
-    image: cover,
-    datePublished: article.createdAt,
-    dateModified: article.updatedAt || article.createdAt,
-    articleSection: article.category || '',
-    keywords: article.tags?.join(',') || '',
-    author: { '@type': 'Organization', name: site.name, url: site.url },
-    publisher: {
-      '@type': 'Organization',
-      name: site.name,
-      logo: { '@type': 'ImageObject', url: site.logo || cover },
+  const ld: any[] = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      headline: article.title,
+      description: article.summary,
+      url: articleUrl,
+      image: cover,
+      datePublished: article.createdAt,
+      dateModified: article.updatedAt || article.createdAt,
+      articleSection: article.category || '',
+      keywords: article.tags?.join(',') || '',
+      author: { '@type': 'Organization', name: site.name, url: site.url },
+      publisher: {
+        '@type': 'Organization',
+        name: site.name,
+        logo: { '@type': 'ImageObject', url: site.logo || cover },
+      },
+      mainEntityOfPage: { '@type': 'WebPage', '@id': articleUrl },
     },
-    mainEntityOfPage: { '@type': 'WebPage', '@id': articleUrl },
-  }]
+  ]
   if (article.faq?.length) {
     ld.push({
       '@context': 'https://schema.org',
@@ -647,7 +689,7 @@ export function articleJsonLd(article: {
       })),
     })
   }
-  return JSON.stringify(ld)
+  return JSON.stringify(ld).replace(/</g, '\\u003c')
 }
 
 // ============================================================
@@ -731,7 +773,9 @@ export function flattenToStrings(v: unknown): any[] {
     try {
       const parsed = JSON.parse(v)
       return Array.isArray(parsed) ? parsed : []
-    } catch { return [] }
+    } catch {
+      return []
+    }
   }
   return []
 }
@@ -749,7 +793,9 @@ export function flattenLinks(v: unknown): { label: string; url: string; kind?: s
 }
 
 /** 安全解析文章行（content/links/faq 可能是 JSON 字符串或对象） */
-export function safeArticle<T extends Record<string, any>>(row: T): T & {
+export function safeArticle<T extends Record<string, any>>(
+  row: T,
+): T & {
   content: any[]
   links: any[]
   faq: any[]
@@ -767,10 +813,13 @@ export function safeArticle<T extends Record<string, any>>(row: T): T & {
  * 绑定：更多折叠 / 复制链接 / 纠错按钮
  * opts: { reportUrl?: string, onTrackClick?: (linkId) => void }
  */
-export function initArticleActions(root: ParentNode = document, opts: {
-  reportUrl?: string
-  onTrackClick?: (linkId: string) => void
-} = {}): void {
+export function initArticleActions(
+  root: ParentNode = document,
+  opts: {
+    reportUrl?: string
+    onTrackClick?: (linkId: string) => void
+  } = {},
+): void {
   if (typeof document === 'undefined') return
 
   // 更多折叠
@@ -779,9 +828,7 @@ export function initArticleActions(root: ParentNode = document, opts: {
     if (t.matches?.('[data-action="toggle-more"]')) {
       const list = t.parentElement?.querySelector('.more-list')
       if (list) list.toggleAttribute('hidden')
-      t.textContent = list?.hasAttribute('hidden')
-        ? `${t.textContent?.replace(/（.*?）/, '').trim()}`
-        : '收起'
+      t.textContent = list?.hasAttribute('hidden') ? `${t.textContent?.replace(/（.*?）/, '').trim()}` : '收起'
     }
   })
 
@@ -796,7 +843,9 @@ export function initArticleActions(root: ParentNode = document, opts: {
         await navigator.clipboard.writeText(text)
         t.textContent = '已复制'
         setTimeout(() => (t.textContent = '复制链接'), 2000)
-      } catch { /* 忽略 */ }
+      } catch {
+        /* 忽略 */
+      }
     }
   })
 

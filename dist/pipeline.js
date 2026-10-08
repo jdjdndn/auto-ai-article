@@ -9,6 +9,8 @@ const prompts_js_1 = require("./prompts.js");
 const utils_js_1 = require("./utils.js");
 const content_safety_js_1 = require("./content-safety.js");
 const ai_fallback_js_1 = require("./ai-fallback.js");
+const article_quality_js_1 = require("./article-quality.js");
+const search_terms_js_1 = require("./search-terms.js");
 // —— 占位 URL 清洗 ——
 const PLACEHOLDER_URL = /(^|[/.@])(example\.(com|org|net)|test\.com|yourlink\.com|yourdomain\.com|your-url\.com|sample\.com|domain\.com|website\.com|lorem\.ipsum|placeholder\.com)/i;
 function cleanUrl(u) {
@@ -35,12 +37,31 @@ function sanitizeBlocks(blocks) {
             const { link: _, ...rest } = b;
             return rest;
         }
-        if ((b.type === 'image' || b.type === 'video') && typeof b.url === 'string' && !cleanUrl(b.url)) {
+        if ((b.type === 'image' || b.type === 'video') &&
+            typeof b.url === 'string' &&
+            !cleanUrl(b.url)) {
             return null;
         }
         return b;
     })
         .filter((b) => b !== null);
+}
+// —— 文章 → 纯文本（供质量评分用）——
+function articleToText(a) {
+    const parts = [`# ${a.title}`, a.summary];
+    for (const b of a.content) {
+        if (b.type === 'h2')
+            parts.push(`## ${b.text}`);
+        else if ('text' in b && typeof b.text === 'string')
+            parts.push(b.text);
+        if (b.type === 'list' && Array.isArray(b.items))
+            parts.push(b.items.map((i) => `- ${i}`).join('\n'));
+        if (b.type === 'price' && b.desc)
+            parts.push(b.desc);
+    }
+    for (const f of a.faq)
+        parts.push(f.q, f.a);
+    return parts.filter(Boolean).join('\n');
 }
 // —— 默认 AI 客户端（复用 ai-fallback 的 OpenAI 兼容客户端）——
 function createDefaultAiClient(config) {
@@ -97,6 +118,7 @@ async function mapWithConcurrency(tasks, limit, fn) {
 }
 function createPipeline(db, config = {}) {
     const target = config.target ?? 3;
+    const log = config.logger || ((...args) => console.log(new Date().toISOString(), '[pipeline]', ...args));
     // AI 客户端选择逻辑：
     // 1. config.ai.client → 直接使用（最高优先级）
     // 2. config.ai.cloudflare → 使用降级客户端（额度用完自动切换 OpenRouter）
@@ -117,8 +139,8 @@ function createPipeline(db, config = {}) {
     }
     else if (ai.openrouter || process.env.OPENROUTER_API_KEY) {
         const or = ai.openrouter;
-        const orKey = (or && or.apiKey) || process.env.OPENROUTER_API_KEY;
-        const orModels = or && or.models;
+        const orKey = or?.apiKey || process.env.OPENROUTER_API_KEY;
+        const orModels = or?.models;
         aiClient = (0, ai_fallback_js_1.createAiClient)({
             openrouter: { apiKey: orKey, ...(orModels ? { models: orModels } : {}) },
         });
@@ -138,14 +160,20 @@ function createPipeline(db, config = {}) {
     // —— AI 选题（带重试）——
     async function suggestTopics() {
         return withRetry(async () => {
+            const baseUserContent = '请输出 3 个选题 JSON 数组。只输出 JSON 数组，不要 markdown，不要解释。';
+            const userContent = config.searchTerms?.length
+                ? (0, search_terms_js_1.injectSearchTerms)(baseUserContent, config.searchTerms)
+                : baseUserContent;
             const text = await aiClient([
                 { role: 'system', content: suggestPrompt },
-                { role: 'user', content: '请输出 3 个选题 JSON 数组。只输出 JSON 数组，不要 markdown，不要解释。' },
+                { role: 'user', content: userContent },
             ]);
             const parsed = (0, utils_js_1.extractJson)(text);
             const arr = (0, utils_js_1.asAnyArray)(parsed);
             if (!arr || !arr.length) {
-                const snippet = String(text || '').slice(0, 180).replace(/\s+/g, ' ');
+                const snippet = String(text || '')
+                    .slice(0, 180)
+                    .replace(/\s+/g, ' ');
                 throw new Error(`AI 选题返回空数组 raw=${snippet}`);
             }
             const items = arr
@@ -180,8 +208,10 @@ function createPipeline(db, config = {}) {
                 content: (0, utils_js_1.normalizeContentBlocks)(a.content),
                 template: (['deal', 'guide', 'faq', 'default'].includes(a.template)
                     ? a.template
-                    : (opts.template && opts.template !== 'auto' ? opts.template : 'deal')),
-                category: opts.category && opts.category !== 'auto' ? opts.category : (a.category || '优惠'),
+                    : opts.template && opts.template !== 'auto'
+                        ? opts.template
+                        : 'deal'),
+                category: opts.category && opts.category !== 'auto' ? opts.category : a.category || '优惠',
                 tags: Array.isArray(a.tags) ? a.tags : [],
                 faq: Array.isArray(a.faq) ? a.faq : [],
                 links: Array.isArray(a.links) ? a.links : [],
@@ -288,7 +318,9 @@ function createPipeline(db, config = {}) {
         const linked = list.filter((s) => s.articleId);
         if (linked.length) {
             for (const s of linked) {
-                await db.markSeedDone(s.id, s.articleId).catch(() => { });
+                await db
+                    .markSeedDone(s.id, s.articleId)
+                    .catch((e) => log('清理残留 pending 失败:', e?.message || e));
             }
             list = list.filter((s) => !s.articleId);
         }
@@ -298,7 +330,9 @@ function createPipeline(db, config = {}) {
         const outcomes = await mapWithConcurrency(targets, concurrency, async (s) => {
             const raw = String(s.raw || '');
             if (raw.length < 8) {
-                await db.markSeedFailed(s.id, '素材过短').catch(() => { });
+                await db
+                    .markSeedFailed(s.id, '素材过短')
+                    .catch((e) => log('标记素材失败（素材过短）失败:', e?.message || e));
                 throw new Error('素材过短');
             }
             const article = await generateArticle(raw, {
@@ -308,6 +342,17 @@ function createPipeline(db, config = {}) {
             });
             // 内容安全处理
             const { article: safeArticle } = applySafety(article);
+            // 质量评分门控（低分跳过入库，杜绝水文上线）
+            if (config.quality) {
+                const score = (0, article_quality_js_1.scoreArticle)(articleToText(safeArticle), config.quality);
+                if (!score.pass) {
+                    await db
+                        .markSeedFailed(s.id, `质量不达标 ${score.total}分`)
+                        .catch((e) => log('标记素材失败（质量不达标）失败:', e?.message || e));
+                    throw new Error(`文章质量不达标 ${score.total}分：套话命中 ${score.clicheHits.join(', ') || '无'}`);
+                }
+                log(`质量评分 ${score.total}分（信息${score.details.infoDensity}/套话${score.details.clicheDensity}/结构${score.details.structure}/原创${score.details.originality}）`);
+            }
             // 入库
             const r = await db.insertArticles([safeArticle]);
             const res = r.results?.[0];
@@ -340,7 +385,9 @@ function createPipeline(db, config = {}) {
                 error: result.errors.length ? result.errors.join('; ').slice(0, 300) : null,
             });
         }
-        catch { /* 日志失败不阻塞 */ }
+        catch {
+            /* 日志失败不阻塞 */
+        }
         return result;
     }
     return { suggestTopics, generateArticle, run };

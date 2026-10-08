@@ -1,5 +1,6 @@
 node_modules/
 data/
+dist-test/
 # 本地发布状态（各站源码指纹，机器相关，勿提交）
 release-state.json
 release-log/

@@ -20,12 +20,12 @@ export type { AiModel }
 // —— 故障类型 ——
 
 export type FallbackReason =
-  | 'quota_exceeded'      // 额度不足
-  | 'timeout'             // 超时
-  | 'rate_limit'          // 限流
-  | 'server_error'        // 服务端错误
-  | 'invalid_request'     // 请求无效
-  | 'unknown'             // 未知错误
+  | 'quota_exceeded' // 额度不足
+  | 'timeout' // 超时
+  | 'rate_limit' // 限流
+  | 'server_error' // 服务端错误
+  | 'invalid_request' // 请求无效
+  | 'unknown' // 未知错误
 
 // —— 降级配置 ——
 
@@ -143,10 +143,7 @@ function classifyError(error: Error): FallbackReason {
 
 // —— 创建单个模型的客户端 ——
 
-function createModelClient(
-  model: AiModel,
-  config: FallbackConfig
-): AiClient {
+function createModelClient(model: AiModel, config: FallbackConfig): AiClient {
   const baseUrl = config.baseUrl || 'https://api.cloudflare.com/client/v4'
   const timeoutMs = config.timeoutMs || 120_000
   const maxTokens = config.maxTokens || 15_360
@@ -164,18 +161,15 @@ function createModelClient(
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(new DOMException('AI 请求超时', 'TimeoutError')), timeoutMs)
     try {
-      const res = await fetch(
-        `${baseUrl}/accounts/${config.accountId}/ai/run/${model.id}`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${config.apiToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(body),
-          signal: controller.signal,
-        }
-      )
+      const res = await fetch(`${baseUrl}/accounts/${config.accountId}/ai/run/${model.id}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${config.apiToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      })
 
       if (!res.ok) {
         const bodyText = await res.text().catch(() => '')
@@ -218,7 +212,9 @@ function loadBadModels(store?: BadModelStore): Set<string> {
   try {
     const data = store.load()
     if (data && Array.isArray(data)) return new Set(data)
-  } catch { /* 读失败：从空开始 */ }
+  } catch {
+    /* 读失败：从空开始 */
+  }
   return new Set()
 }
 
@@ -226,7 +222,9 @@ function saveBadModels(store: BadModelStore | undefined, models: Set<string>): v
   if (!store) return
   try {
     store.save([...models])
-  } catch { /* 写失败不影响主流程 */ }
+  } catch {
+    /* 写失败不影响主流程 */
+  }
 }
 
 // —— 创建降级客户端 ——
@@ -252,7 +250,8 @@ export function createFallbackClient(config: FallbackConfig): AiClient {
   // 确定性失败（不重试直接切下一模型）：额度/限流/超时/请求无效/截断/空响应/过短/结尾不完整
   function isDeterministicFailure(err: Error): boolean {
     const reason = classifyError(err)
-    if (reason === 'quota_exceeded' || reason === 'rate_limit' || reason === 'timeout' || reason === 'invalid_request') return true
+    if (reason === 'quota_exceeded' || reason === 'rate_limit' || reason === 'timeout' || reason === 'invalid_request')
+      return true
     return /被截断|没有返回内容|过短|结尾不完整/.test(err.message)
   }
 
@@ -261,14 +260,14 @@ export function createFallbackClient(config: FallbackConfig): AiClient {
 
     // 过滤掉额度已用完或当天已失败的模型
     const unavailable = [...quotaExhausted, ...badModels]
-    const availableModels = models.filter(m => !unavailable.includes(m.id))
+    const availableModels = models.filter((m) => !unavailable.includes(m.id))
 
     if (availableModels.length === 0) {
       throw new Error(`所有模型当天不可用。已记录：${[...new Set(unavailable)].join(', ')}`)
     }
 
     if (availableModels.length < models.length) {
-      const skipped = models.filter(m => unavailable.includes(m.id)).map(m => m.id)
+      const skipped = models.filter((m) => unavailable.includes(m.id)).map((m) => m.id)
       log(`跳过当天不可用模型：${skipped.join(', ')}`)
     }
 
@@ -320,12 +319,17 @@ export function createFallbackClient(config: FallbackConfig): AiClient {
       if (failedForGood) {
         badModels.add(model.id)
         saveBadModels(config.badModelStore, badModels)
-        attempted.push({ model: model.id, success: false, reason: classifyError(lastError || new Error('unknown')), error: lastError?.message })
+        attempted.push({
+          model: model.id,
+          success: false,
+          reason: classifyError(lastError || new Error('unknown')),
+          error: lastError?.message,
+        })
       }
     }
 
     throw new Error(
-      `所有模型均失败。尝试记录：${attempted.map(a => `${a.model}(${a.reason || 'error'})`).join(', ')}`
+      `所有模型均失败。尝试记录：${attempted.map((a) => `${a.model}(${a.reason || 'error'})`).join(', ')}`,
     )
   }
 }
@@ -333,9 +337,7 @@ export function createFallbackClient(config: FallbackConfig): AiClient {
 // —— 获取推荐模型列表 ——
 
 export function getRecommendedModels(chineseOnly = true): AiModel[] {
-  return FREE_TEXT_MODELS
-    .filter(m => !chineseOnly || m.chineseOptimized)
-    .sort((a, b) => a.priority - b.priority)
+  return FREE_TEXT_MODELS.filter((m) => !chineseOnly || m.chineseOptimized).sort((a, b) => a.priority - b.priority)
 }
 
 // —— 导出默认客户端工厂 ——
@@ -424,10 +426,15 @@ export function createAiClient(config: UnifiedAiConfig): AiClient {
  * OpenRouter 客户端：OpenAI 兼容端点 + 免费模型链依次降级
  * （402 无额度 / 404 模型下架 / 429 限流 / 5xx → 切换下一模型）
  */
-export function createOpenRouterClient(config: { apiKey: string; baseUrl?: string; models?: string[]; timeoutMs?: number }): AiClient {
+export function createOpenRouterClient(config: {
+  apiKey: string
+  baseUrl?: string
+  models?: string[]
+  timeoutMs?: number
+}): AiClient {
   const baseUrl = (config.baseUrl || 'https://openrouter.ai/api/v1').replace(/\/+$/, '')
   const apiKey = config.apiKey
-  const models = config.models && config.models.length ? config.models : OPENROUTER_FREE_MODELS
+  const models = config.models?.length ? config.models : OPENROUTER_FREE_MODELS
   const timeoutMs = config.timeoutMs || 120_000
 
   return async (messages: AiMessage[]): Promise<string> => {
