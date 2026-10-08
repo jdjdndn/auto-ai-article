@@ -70,3 +70,19 @@ export declare function startScheduler(env: any, config?: SchedulerConfig): {
     start: () => any;
     getStatus: () => any;
 };
+export interface DailyAlarmPluginOptions {
+    /** 目标时间（北京时间 "HH:mm"），默认 "08:00" */
+    alarmTime?: string;
+    /** 站点每日生成函数（各站封装自己的业务逻辑） */
+    generate: () => Promise<unknown>;
+    /** 可选：alarm 触发时先执行的额外处理（如到期草稿发布/过期标记/日志清理） */
+    onAlarm?: () => Promise<void>;
+}
+/** DO alarm 定时触发插件工厂（配合 Nitro 的 cloudflare:durable:* hooks） */
+export declare function createDailyAlarmPlugin(opts: DailyAlarmPluginOptions): (nitroApp: any) => void;
+export interface ScheduledPluginOptions {
+    /** 站点每日生成函数（各站封装自己的业务逻辑） */
+    generate: () => Promise<unknown>;
+}
+/** Workers Cron Triggers 触发插件工厂（备用路径，仅在重新启用 cron 时生效） */
+export declare function createScheduledPlugin(opts: ScheduledPluginOptions): (nitroApp: any) => void;

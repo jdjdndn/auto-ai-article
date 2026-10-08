@@ -223,13 +223,20 @@ export function createPipeline(db: PipelineDB, config: PipelineConfig = {}): Pip
       throw new Error(`AI 内容过短（${item.content.length} 块 / ${contentChars} 字），请重试`)
     }
 
-    // URL 清洗
-    if (sanitizeUrls) {
-      item.links = sanitizeLinks(item.links)
-      item.content = sanitizeBlocks(item.content)
+    // 链接池解析钩子（站点特有：如 article-site 的 applyLinkPool）— 须在 URL 清洗之前，
+    // 先把 AI 输出的 ref/linkId 解析成链接池真实 URL，再由 sanitize 兜底清占位/非法链接
+    let resolved: GeneratedArticle = item
+    if (config.resolveLinks) {
+      resolved = config.resolveLinks(item)
     }
 
-    return item
+    // URL 清洗
+    if (sanitizeUrls) {
+      resolved.links = sanitizeLinks(resolved.links)
+      resolved.content = sanitizeBlocks(resolved.content)
+    }
+
+    return resolved
   }
 
   // —— 内容安全处理 ——

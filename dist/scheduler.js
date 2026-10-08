@@ -10,6 +10,8 @@ exports.applyWorkerEnv = applyWorkerEnv;
 exports.initDoAlarm = initDoAlarm;
 exports.rescheduleDoAlarm = rescheduleDoAlarm;
 exports.startScheduler = startScheduler;
+exports.createDailyAlarmPlugin = createDailyAlarmPlugin;
+exports.createScheduledPlugin = createScheduledPlugin;
 const executor_js_1 = require("./executor.js");
 const schema_js_1 = require("./schema.js");
 const drizzle_orm_1 = require("drizzle-orm");
@@ -247,5 +249,61 @@ function startScheduler(env, config = {}) {
     return {
         start: () => stub.start(config),
         getStatus: () => stub.getStatus(),
+    };
+}
+/** DO alarm 定时触发插件工厂（配合 Nitro 的 cloudflare:durable:* hooks） */
+function createDailyAlarmPlugin(opts) {
+    const alarmTime = opts.alarmTime || '08:00';
+    return (nitroApp) => {
+        // DO 初始化时设置首次 alarm
+        nitroApp.hooks.hook('cloudflare:durable:init', async (durable, { state }) => {
+            await initDoAlarm(state.storage, alarmTime);
+        });
+        // DO alarm 触发：env 注入 → 可选额外处理 → 每日生成 → 重设下一次
+        nitroApp.hooks.hook('cloudflare:durable:alarm', async (durable) => {
+            console.log(`[alarm] 触发: ${new Date().toISOString()}`);
+            applyWorkerEnv(durable.env);
+            if (opts.onAlarm) {
+                try {
+                    await opts.onAlarm();
+                    console.log(`[alarm] 定时发布/过期处理完成`);
+                }
+                catch (e) {
+                    console.error(`[alarm] 定时发布/过期处理失败:`, e?.message);
+                }
+            }
+            try {
+                const result = await opts.generate();
+                console.log(`[alarm] 完成:`, result);
+            }
+            catch (e) {
+                console.error(`[alarm] 生成失败:`, e?.message);
+            }
+            // 一次性 alarm，触发后必须重设下一次，否则次日起不再自动发文
+            try {
+                await rescheduleDoAlarm(durable.ctx.storage, alarmTime);
+            }
+            catch (e) {
+                console.error(`[alarm] 重设失败:`, e?.message);
+            }
+        });
+    };
+}
+/** Workers Cron Triggers 触发插件工厂（备用路径，仅在重新启用 cron 时生效） */
+function createScheduledPlugin(opts) {
+    return (nitroApp) => {
+        nitroApp.hooks.hook('cloudflare:scheduled', async (payload) => {
+            applyWorkerEnv(payload?.env);
+            console.log('[scheduled] cron 触发:', new Date().toISOString());
+            try {
+                const result = await opts.generate();
+                console.log('[scheduled] 完成:', result);
+                return result;
+            }
+            catch (e) {
+                console.error('[scheduled] 失败:', e?.message);
+                return { ok: false, error: e?.message };
+            }
+        });
     };
 }

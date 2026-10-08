@@ -264,3 +264,92 @@ export function startScheduler(env: any, config: SchedulerConfig = {}) {
     getStatus: () => stub.getStatus(),
   }
 }
+
+// ============================================================
+// Nitro 插件工厂 — 统一各消费站点的定时调度插件
+// 各站点 server/plugins/durable-alarm.ts / scheduled.ts 只需薄层调用：
+//
+//   import { createDailyAlarmPlugin } from 'ai-article-pipeline'
+//   import { executeDailyGenerate } from '../utils/daily-generate'
+//   export default defineNitroPlugin(createDailyAlarmPlugin({
+//     alarmTime: '08:00',
+//     generate: () => executeDailyGenerate(),
+//   }))
+//
+// 调度细节（首次设置/触发/重设/env 注入/错误处理）全部收口在库内，
+// 避免各站点自行复制插件导致函数名、时序、兜底逻辑分叉。
+// ============================================================
+
+export interface DailyAlarmPluginOptions {
+  /** 目标时间（北京时间 "HH:mm"），默认 "08:00" */
+  alarmTime?: string
+  /** 站点每日生成函数（各站封装自己的业务逻辑） */
+  generate: () => Promise<unknown>
+  /** 可选：alarm 触发时先执行的额外处理（如到期草稿发布/过期标记/日志清理） */
+  onAlarm?: () => Promise<void>
+}
+
+/** DO alarm 定时触发插件工厂（配合 Nitro 的 cloudflare:durable:* hooks） */
+export function createDailyAlarmPlugin(opts: DailyAlarmPluginOptions) {
+  const alarmTime = opts.alarmTime || '08:00'
+
+  return (nitroApp: any) => {
+    // DO 初始化时设置首次 alarm
+    nitroApp.hooks.hook('cloudflare:durable:init', async (durable: any, { state }: any) => {
+      await initDoAlarm(state.storage, alarmTime)
+    })
+
+    // DO alarm 触发：env 注入 → 可选额外处理 → 每日生成 → 重设下一次
+    nitroApp.hooks.hook('cloudflare:durable:alarm', async (durable: any) => {
+      console.log(`[alarm] 触发: ${new Date().toISOString()}`)
+      applyWorkerEnv((durable as any).env)
+
+      if (opts.onAlarm) {
+        try {
+          await opts.onAlarm()
+          console.log(`[alarm] 定时发布/过期处理完成`)
+        } catch (e: any) {
+          console.error(`[alarm] 定时发布/过期处理失败:`, e?.message)
+        }
+      }
+
+      try {
+        const result = await opts.generate()
+        console.log(`[alarm] 完成:`, result)
+      } catch (e: any) {
+        console.error(`[alarm] 生成失败:`, e?.message)
+      }
+
+      // 一次性 alarm，触发后必须重设下一次，否则次日起不再自动发文
+      try {
+        await rescheduleDoAlarm((durable as any).ctx.storage, alarmTime)
+      } catch (e: any) {
+        console.error(`[alarm] 重设失败:`, e?.message)
+      }
+    })
+  }
+}
+
+export interface ScheduledPluginOptions {
+  /** 站点每日生成函数（各站封装自己的业务逻辑） */
+  generate: () => Promise<unknown>
+}
+
+/** Workers Cron Triggers 触发插件工厂（备用路径，仅在重新启用 cron 时生效） */
+export function createScheduledPlugin(opts: ScheduledPluginOptions) {
+  return (nitroApp: any) => {
+    nitroApp.hooks.hook('cloudflare:scheduled', async (payload: any) => {
+      applyWorkerEnv(payload?.env)
+      console.log('[scheduled] cron 触发:', new Date().toISOString())
+
+      try {
+        const result = await opts.generate()
+        console.log('[scheduled] 完成:', result)
+        return result
+      } catch (e: any) {
+        console.error('[scheduled] 失败:', e?.message)
+        return { ok: false, error: e?.message }
+      }
+    })
+  }
+}

@@ -181,6 +181,12 @@ export interface PipelineConfig {
   suggestRetries?: number
   /** 并发生成篇数（默认 3） */
   concurrency?: number
+  /**
+   * 链接池解析钩子：生成并清洗 URL 后调用，把 AI 输出的 ref/linkId 解析成站点
+   * 自有链接池的真实条目（默认透传，不做任何处理）。
+   * 示例：article-site 传 shared/ai-prompts.mjs 的 applyLinkPool。
+   */
+  resolveLinks?: (article: GeneratedArticle) => GeneratedArticle
 }
 
 // —— 管线运行结果 ——
