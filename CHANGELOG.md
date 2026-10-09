@@ -16,6 +16,10 @@
 - **文章周边组件**：`renderArticleLinks`、`renderFaqSection`、`renderShareBar`、`initArticleActions`
 - **JSON-LD 生成**：`articleJsonLd`、`organizationJsonLd`、`websiteJsonLd`、`productJsonLd`、`faqJsonLd`
 - **CLI 入口** `cli.ts`：手动触发 AI 文章生成
+- **配置校验** `config-check.ts`：启动前校验必填项/提供方/模型链连通性
+- **CLI `--check`**：配置校验命令，启动前自检配置
+- **`.env.example`**：大幅完善，覆盖全部环境变量并附获取链接
+- **`vitest.config.ts`**：新增 Vitest 配置
 
 ### 优化
 - **Nuxt build 优化**：关闭 devtools + sourcemap，单站 build 从 ~100s 降到 ~14s
@@ -36,7 +40,8 @@
 
 ### 测试
 - **ai-fallback 单测**：116 个测试，行覆盖率 99.64%，分支覆盖率 94.02%
-- 全套件 158 tests pass
+- **新增 12 个测试文件**：ai-config/alerting/cli/client/executor/local-gateway/prompts/runner/scheduler/schema/search-terms/sources
+- 全套件 589 tests pass，20 个测试文件覆盖几乎所有模块
 
 ## [0.1.0] — 2026-09-28
 

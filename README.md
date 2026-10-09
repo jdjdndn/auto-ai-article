@@ -48,6 +48,7 @@ graph TB
     Safety[content-safety.ts<br/>违规词扫描]
     Sources[sources.ts<br/>RSS 素材采集]
     Related[related.ts<br/>相关文章计算]
+    ConfigCheck[config-check.ts<br/>配置校验]
   end
 
   subgraph 基础设施
@@ -55,6 +56,7 @@ graph TB
     Schema[schema.ts<br/>Drizzle 表定义]
     Utils[utils.ts<br/>JSON/HTML/JSON-LD]
     Prompts[prompts.ts<br/>默认提示词]
+    Client[client.ts<br/>对外客户端]
   end
 
   CLI --> Executor
@@ -73,6 +75,10 @@ graph TB
   AiFallback --> LocalGateway
   Pipeline --> Utils
   Pipeline --> Prompts
+  CLI --> ConfigCheck
+  ConfigCheck --> AiConfig
+  Client --> Utils
+  Client --> Types
 ```
 
 ## 降级策略
@@ -82,20 +88,20 @@ AI 调用采用三级降级 + 自愈 + 互斥锁，确保最大可用性：
 ### 三级 AI 降级链
 
 ```
-本地 AI（Ollama 等）→ CF Workers AI（16 模型轮换）→ OpenRouter（10 免费模型兜底）
+本地 AI（Ollama 等）→ CF Workers AI（17 模型轮换）→ OpenRouter（10 免费模型兜底）
 ```
 
 | 优先级 | 提供方 | 说明 |
 |--------|--------|------|
 | 1 | 本地 AI | `LocalAiProvider`，Ollama 等，最高优先级 |
-| 2 | CF Workers AI | `CfBindingProvider`，16 个免费模型按 priority 轮换 |
+| 2 | CF Workers AI | `CfBindingProvider`，17 个免费模型按 priority 轮换 |
 | 3 | OpenRouter | `OpenRouterProvider`，10 个免费模型兜底 |
 
 故障分类（`classifyError`）：
 
 | 分类 | 触发条件 | 处理 |
 |------|----------|------|
-| `quota_exceeded` | 429 + quota/limit/exhausted | 标记模型当天不可用，切换下一个 |
+| `quota_exceeded` | quota/exceeded（非 429，429 先匹配 rate_limit） | 标记模型当天不可用，切换下一个 |
 | `rate_limit` | 429（非 quota） | 切换下一个模型 |
 | `timeout` | 超时 / AbortError | 切换下一个模型 |
 | `server_error` | 5xx | 切换下一个模型 |
