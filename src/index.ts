@@ -33,6 +33,16 @@ export { dateContext, aiSystemPrompt, aiSuggestPrompt } from './prompts.js'
 export { articles, seeds, runLogs } from './schema.js'
 export type { ArticleRow, SeedRow, RunLogRow } from './schema.js'
 
+// R2 正文存储（R2+D1 统一架构：D1 存元数据，R2 存正文）
+export {
+  getSiteId,
+  getR2Binding,
+  writeArticleContent,
+  readArticleContent,
+  deleteArticleContent,
+} from './r2.js'
+export type { ArticleContent } from './r2.js'
+
 // 工具函数
 export {
   extractJson,

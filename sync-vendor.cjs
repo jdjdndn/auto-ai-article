@@ -31,7 +31,12 @@ const TARGETS = [
   ['gexing-wifi', 'vendor/ai-article-pipeline'],
   ['liantong-wifi', 'vendor/ai-article-pipeline'],
   ['article-site', 'vendor/ai-article-pipeline'],
-  ['github-auto-article/template', 'vendor/ai-article-pipeline'],
+  ['yanhe-chuhe', 'vendor/ai-article-pipeline'],
+  ['yanhe-hejubian', 'vendor/ai-article-pipeline'],
+  ['yanhe-hetianxia', 'vendor/ai-article-pipeline'],
+  ['yanhe-tonghe', 'vendor/ai-article-pipeline'],
+  ['yanhe-xiaohe', 'vendor/ai-article-pipeline'],
+  ['github-auto-article', 'vendor/ai-article-pipeline'],
   ['_share/seo-optimizer', 'vendor/ai-article-pipeline'],
 ]
 
