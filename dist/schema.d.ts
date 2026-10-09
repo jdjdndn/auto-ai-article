@@ -59,25 +59,6 @@ export declare const articles: import("drizzle-orm/sqlite-core").SQLiteTableWith
         }, {}, {
             length: number | undefined;
         }>;
-        content: import("drizzle-orm/sqlite-core").SQLiteColumn<{
-            name: "content";
-            tableName: "articles";
-            dataType: "string";
-            columnType: "SQLiteText";
-            data: string;
-            driverParam: string;
-            notNull: true;
-            hasDefault: false;
-            isPrimaryKey: false;
-            isAutoincrement: false;
-            hasRuntimeDefault: false;
-            enumValues: [string, ...string[]];
-            baseColumn: never;
-            identity: undefined;
-            generated: undefined;
-        }, {}, {
-            length: number | undefined;
-        }>;
         firstImage: import("drizzle-orm/sqlite-core").SQLiteColumn<{
             name: "first_image";
             tableName: "articles";
@@ -211,65 +192,8 @@ export declare const articles: import("drizzle-orm/sqlite-core").SQLiteTableWith
         }, {}, {
             length: number | undefined;
         }>;
-        links: import("drizzle-orm/sqlite-core").SQLiteColumn<{
-            name: "links";
-            tableName: "articles";
-            dataType: "string";
-            columnType: "SQLiteText";
-            data: string;
-            driverParam: string;
-            notNull: true;
-            hasDefault: true;
-            isPrimaryKey: false;
-            isAutoincrement: false;
-            hasRuntimeDefault: false;
-            enumValues: [string, ...string[]];
-            baseColumn: never;
-            identity: undefined;
-            generated: undefined;
-        }, {}, {
-            length: number | undefined;
-        }>;
-        friendLinks: import("drizzle-orm/sqlite-core").SQLiteColumn<{
-            name: "friend_links";
-            tableName: "articles";
-            dataType: "string";
-            columnType: "SQLiteText";
-            data: string;
-            driverParam: string;
-            notNull: true;
-            hasDefault: true;
-            isPrimaryKey: false;
-            isAutoincrement: false;
-            hasRuntimeDefault: false;
-            enumValues: [string, ...string[]];
-            baseColumn: never;
-            identity: undefined;
-            generated: undefined;
-        }, {}, {
-            length: number | undefined;
-        }>;
-        relatedIds: import("drizzle-orm/sqlite-core").SQLiteColumn<{
-            name: "related_ids";
-            tableName: "articles";
-            dataType: "string";
-            columnType: "SQLiteText";
-            data: string;
-            driverParam: string;
-            notNull: true;
-            hasDefault: true;
-            isPrimaryKey: false;
-            isAutoincrement: false;
-            hasRuntimeDefault: false;
-            enumValues: [string, ...string[]];
-            baseColumn: never;
-            identity: undefined;
-            generated: undefined;
-        }, {}, {
-            length: number | undefined;
-        }>;
-        faq: import("drizzle-orm/sqlite-core").SQLiteColumn<{
-            name: "faq";
+        siteId: import("drizzle-orm/sqlite-core").SQLiteColumn<{
+            name: "site_id";
             tableName: "articles";
             dataType: "string";
             columnType: "SQLiteText";
@@ -540,6 +464,25 @@ export declare const seeds: import("drizzle-orm/sqlite-core").SQLiteTableWithCol
         }, {}, {
             length: number | undefined;
         }>;
+        siteId: import("drizzle-orm/sqlite-core").SQLiteColumn<{
+            name: "site_id";
+            tableName: "seeds";
+            dataType: "string";
+            columnType: "SQLiteText";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {
+            length: number | undefined;
+        }>;
         createdAt: import("drizzle-orm/sqlite-core").SQLiteColumn<{
             name: "created_at";
             tableName: "seeds";
@@ -728,6 +671,25 @@ export declare const runLogs: import("drizzle-orm/sqlite-core").SQLiteTableWithC
             identity: undefined;
             generated: undefined;
         }, {}, {}>;
+        siteId: import("drizzle-orm/sqlite-core").SQLiteColumn<{
+            name: "site_id";
+            tableName: "run_logs";
+            dataType: "string";
+            columnType: "SQLiteText";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {
+            length: number | undefined;
+        }>;
         createdAt: import("drizzle-orm/sqlite-core").SQLiteColumn<{
             name: "created_at";
             tableName: "run_logs";

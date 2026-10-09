@@ -147,8 +147,17 @@ export declare function flattenLinks(v: unknown): {
     url: string;
     kind?: string;
 }[];
-/** 安全解析文章行（content/links/faq 可能是 JSON 字符串或对象） */
-export declare function safeArticle<T extends Record<string, any>>(row: T): T & {
+/** 安全解析文章行（content/links/faq 可能是 JSON 字符串或对象）
+ *  body 可选：R2 正文数据（R2+D1 架构下 content/links/friendLinks/faq/relatedIds 从 R2 读）。
+ *  不传 body 时回退到 row 内字段（旧 D1-only 兼容）。
+ */
+export declare function safeArticle<T extends Record<string, any>>(row: T, body?: {
+    content?: any;
+    links?: any;
+    faq?: any;
+    friendLinks?: any;
+    relatedIds?: any;
+}): T & {
     content: any[];
     links: any[];
     faq: any[];

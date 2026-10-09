@@ -2,6 +2,8 @@ export type { Seed, SeedInput, GeneratedArticle, ContentBlock, FaqItem, LinkItem
 export { dateContext, aiSystemPrompt, aiSuggestPrompt } from './prompts.js';
 export { articles, seeds, runLogs } from './schema.js';
 export type { ArticleRow, SeedRow, RunLogRow } from './schema.js';
+export { getSiteId, getR2Binding, writeArticleContent, readArticleContent, deleteArticleContent, } from './r2.js';
+export type { ArticleContent } from './r2.js';
 export { extractJson, safeJson, normalizeJson, firstImageOf, firstNonEmpty, asAnyArray, normalizeContentBlocks, escapeHtml, renderArticleBlocks, renderArticleCta, generateToc, readingTime, articleCss, renderArticleLinks, renderRelatedArticles, renderFaqSection, renderShareBar, articleJsonLd, organizationJsonLd, websiteJsonLd, productJsonLd, faqJsonLd, initArticleActions, flattenToStrings, flattenFaq, flattenLinks, safeArticle, cnTodayStartISO, } from './utils.js';
 export { fetchRssFeed, extractArticleText, textSimilarity, normalizeText } from './sources.js';
 export type { RssItem } from './sources.js';

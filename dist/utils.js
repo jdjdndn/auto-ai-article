@@ -770,13 +770,18 @@ function flattenLinks(v) {
     const arr = flattenToStrings(v);
     return arr.filter((l) => l?.url);
 }
-/** 安全解析文章行（content/links/faq 可能是 JSON 字符串或对象） */
-function safeArticle(row) {
+/** 安全解析文章行（content/links/faq 可能是 JSON 字符串或对象）
+ *  body 可选：R2 正文数据（R2+D1 架构下 content/links/friendLinks/faq/relatedIds 从 R2 读）。
+ *  不传 body 时回退到 row 内字段（旧 D1-only 兼容）。
+ */
+function safeArticle(row, body) {
     return {
         ...row,
-        content: flattenToStrings(row.content),
-        links: flattenLinks(row.links),
-        faq: flattenFaq(row.faq),
+        content: flattenToStrings(body?.content ?? row.content ?? []),
+        links: flattenLinks(body?.links ?? row.links ?? []),
+        faq: flattenFaq(body?.faq ?? row.faq ?? []),
+        ...(body?.friendLinks !== undefined ? { friendLinks: body.friendLinks } : {}),
+        ...(body?.relatedIds !== undefined ? { relatedIds: body.relatedIds } : {}),
     };
 }
 /**
