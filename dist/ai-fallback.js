@@ -4,7 +4,7 @@
 // 独立封装，不修改其他项目代码
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.LocalAiProvider = exports.OpenRouterProvider = exports.CfBindingProvider = exports.FallbackChain = exports.OPENROUTER_FREE_MODELS = exports.FREE_TEXT_MODELS = void 0;
+exports.CfRestProvider = exports.LocalAiProvider = exports.OpenRouterProvider = exports.CfBindingProvider = exports.FallbackChain = exports.OPENROUTER_FREE_MODELS = exports.FREE_TEXT_MODELS = void 0;
 exports.extractResponse = extractResponse;
 exports.resetQuotaState = resetQuotaState;
 exports.getQuotaExhaustedModels = getQuotaExhaustedModels;
@@ -266,6 +266,8 @@ function createFallbackClient(config) {
 class FallbackChain {
     providers;
     log;
+    /** 最近一次成功的 provider 名（供调用方记录来源） */
+    lastSuccess = null;
     constructor(providers, logFn) {
         this.providers = providers;
         this.log = logFn || ((...args) => console.log(new Date().toISOString(), '[ai-chain]', ...args));
@@ -284,7 +286,9 @@ class FallbackChain {
         const errors = [];
         for (const provider of this.providers) {
             try {
-                return await provider.try(messages);
+                const result = await provider.try(messages);
+                this.lastSuccess = provider.name;
+                return result;
             }
             catch (e) {
                 const msg = String(e?.message || e);
@@ -374,7 +378,7 @@ class OpenRouterProvider {
     }
 }
 exports.OpenRouterProvider = OpenRouterProvider;
-/** 本地 AI provider（Ollama / LM Studio 等 OpenAI 兼容 API） */
+/** 本地 AI provider（token-free-gateway / Ollama / LM Studio 等 OpenAI 兼容网关） */
 class LocalAiProvider {
     name = 'local';
     baseUrl;
@@ -383,7 +387,7 @@ class LocalAiProvider {
     badModels = new Set();
     constructor(config) {
         this.baseUrl = config.baseUrl.replace(/\/+$/, '');
-        this.model = config.model || 'qwen2.5:14b';
+        this.model = config.model || 'deepseek-chat';
         this.apiKey = config.apiKey;
     }
     async try(messages) {
@@ -408,6 +412,22 @@ class LocalAiProvider {
     }
 }
 exports.LocalAiProvider = LocalAiProvider;
+/** CF Workers AI REST provider（Node CLI 用 fetch REST，无需 Workers binding） */
+class CfRestProvider {
+    name = 'cloudflare-rest';
+    client;
+    badModels = new Set();
+    constructor(config) {
+        this.client = createFallbackClient(config);
+    }
+    async try(messages) {
+        return this.client(messages);
+    }
+    getBadModels() {
+        return Array.from(this.badModels);
+    }
+}
+exports.CfRestProvider = CfRestProvider;
 function createBindingFallbackClient(config) {
     const chain = createFallbackChain(config);
     return (messages) => chain.run(messages);
@@ -420,15 +440,20 @@ function createFallbackChain(config) {
     if (config.local) {
         providers.push(new LocalAiProvider(config.local));
     }
-    // 2. CF binding
-    providers.push(new CfBindingProvider({
-        binding: config.binding,
-        models: config.models,
-        maxDepth: config.maxDepth,
-        maxTokens: config.maxTokens,
-        timeoutMs: config.timeoutMs,
-        logFn: (...args) => console.log(new Date().toISOString(), '[ai-cf]', ...args),
-    }));
+    // 2. CF REST（Node CLI）或 CF binding（Workers）
+    if (config.cfRest) {
+        providers.push(new CfRestProvider(config.cfRest));
+    }
+    else if (config.binding) {
+        providers.push(new CfBindingProvider({
+            binding: config.binding,
+            models: config.models,
+            maxDepth: config.maxDepth,
+            maxTokens: config.maxTokens,
+            timeoutMs: config.timeoutMs,
+            logFn: (...args) => console.log(new Date().toISOString(), '[ai-cf]', ...args),
+        }));
+    }
     // 3. OpenRouter（兜底）
     if (config.openrouter) {
         providers.push(new OpenRouterProvider(config.openrouter));

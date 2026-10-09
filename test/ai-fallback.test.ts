@@ -495,7 +495,7 @@ describe('LocalAiProvider', () => {
     assert.equal(await provider.try(msgs), 'local ok')
   })
 
-  it('默认 model 为 qwen2.5:14b', async () => {
+  it('默认 model 为 deepseek-chat（对齐 token-free-gateway）', async () => {
     let capturedBody: Record<string, unknown> | undefined
     fetchImpl = async (_url: string, init: any) => {
       capturedBody = JSON.parse(init.body)
@@ -503,7 +503,7 @@ describe('LocalAiProvider', () => {
     }
     const provider = new LocalAiProvider({ baseUrl: 'http://localhost:11434' })
     await provider.try(msgs)
-    assert.equal(capturedBody!.model, 'qwen2.5:14b')
+    assert.equal(capturedBody!.model, 'deepseek-chat')
   })
 
   it('自定义 model 透传', async () => {

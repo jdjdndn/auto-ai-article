@@ -20,7 +20,7 @@ import {
 
 // —— 参数解析 ——
 
-function parseArgs(argv: string[]): Record<string, string | boolean> {
+export function parseArgs(argv: string[]): Record<string, string | boolean> {
   const args: Record<string, string | boolean> = {}
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i]
@@ -36,7 +36,7 @@ function parseArgs(argv: string[]): Record<string, string | boolean> {
   return args
 }
 
-function usage() {
+export function usage() {
   console.log(`
 用法：ai-article-pipeline [options]
 
@@ -82,7 +82,7 @@ function usage() {
 
 // —— 简易内存 DB（CLI 演示用，实际使用需替换）——
 
-function createDemoDB(): PipelineDB {
+export function createDemoDB(): PipelineDB {
   const seeds: Seed[] = []
   let seedId = 1
   return {
@@ -131,7 +131,7 @@ function createDemoDB(): PipelineDB {
 
 // —— 主入口 ——
 
-async function main() {
+export async function main() {
   const args = parseArgs(process.argv)
 
   if (args.help) {
@@ -265,4 +265,4 @@ async function main() {
   }
 }
 
-main()
+if (require.main === module) main()

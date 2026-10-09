@@ -9,6 +9,10 @@
 //   2. 远程模式（--remote=<url>）：通过 HTTP API 触发远程站点生成，适合生产使用
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.parseArgs = parseArgs;
+exports.usage = usage;
+exports.createDemoDB = createDemoDB;
+exports.main = main;
 const index_js_1 = require("./index.js");
 // —— 参数解析 ——
 function parseArgs(argv) {
@@ -246,4 +250,5 @@ async function main() {
         process.exit(1);
     }
 }
-main();
+if (require.main === module)
+    main();
