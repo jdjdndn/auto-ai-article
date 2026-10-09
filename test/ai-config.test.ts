@@ -149,20 +149,13 @@ describe('FALLBACK_PROVIDERS', () => {
 
   it('provider 顺序符合预期降级链', () => {
     const names = FALLBACK_PROVIDERS.map((p) => p.name)
-    assert.deepEqual(names, [
-      'OpenRouter',
-      '阿里百炼',
-      'Google Gemini',
-      'Mistral',
-      'Cerebras',
-      '自定义 OpenAI 兼容',
-    ])
+    assert.deepEqual(names, ['OpenRouter', '阿里百炼', 'Google Gemini', 'Mistral', 'Cerebras', '自定义 OpenAI 兼容'])
   })
 
   it('每个 provider 的 envKey 符合预期（API key 读取映射）', () => {
     const expected: Record<string, string> = {
       OpenRouter: 'OPENROUTER_API_KEY',
-      '阿里百炼': 'DASHSCOPE_API_KEY',
+      阿里百炼: 'DASHSCOPE_API_KEY',
       'Google Gemini': 'GEMINI_API_KEY',
       Mistral: 'MISTRAL_API_KEY',
       Cerebras: 'CEREBRAS_API_KEY',

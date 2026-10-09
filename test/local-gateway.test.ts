@@ -48,14 +48,10 @@ function useFastTimers(): void {
     hasRef: () => false,
     refresh: () => fakeTimer,
   }
-  mock.method(
-    globalThis,
-    'setTimeout',
-    ((fn: (...args: unknown[]) => void) => {
-      if (typeof fn === 'function') fn()
-      return fakeTimer
-    }) as unknown as typeof globalThis.setTimeout,
-  )
+  mock.method(globalThis, 'setTimeout', ((fn: (...args: unknown[]) => void) => {
+    if (typeof fn === 'function') fn()
+    return fakeTimer
+  }) as unknown as typeof globalThis.setTimeout)
 }
 
 /** 创建唯一临时锁目录路径 */
@@ -156,8 +152,7 @@ describe('runCommand 自愈命令', () => {
 describe('createLocalGatewayClient 本地网关客户端', () => {
   it('正常请求返回内容', async () => {
     fetchImpl = async (url: string) => {
-      if (url.includes('/chat/completions'))
-        return jsonRes({ choices: [{ message: { content: '这是 AI 回复' } }] })
+      if (url.includes('/chat/completions')) return jsonRes({ choices: [{ message: { content: '这是 AI 回复' } }] })
       return jsonRes({})
     }
     const client = createLocalGatewayClient({
@@ -234,8 +229,7 @@ describe('createLocalGatewayClient 本地网关客户端', () => {
   it('返回空内容时抛错并重试', async () => {
     useFastTimers()
     fetchImpl = async (url: string) => {
-      if (url.includes('/chat/completions'))
-        return jsonRes({ choices: [{ message: { content: '' } }] })
+      if (url.includes('/chat/completions')) return jsonRes({ choices: [{ message: { content: '' } }] })
       return jsonRes({})
     }
     const logs: string[] = []
@@ -245,10 +239,7 @@ describe('createLocalGatewayClient 本地网关客户端', () => {
       timeoutMs: 5000,
       logger: (...args) => logs.push(args.join(' ')),
     })
-    await assert.rejects(
-      client([{ role: 'user', content: '你好' }]),
-      /AI 网关没有返回内容/,
-    )
+    await assert.rejects(client([{ role: 'user', content: '你好' }]), /AI 网关没有返回内容/)
     assert.ok(logs.some((l) => l.includes('AI 网关没有返回内容')))
   })
 
@@ -264,17 +255,13 @@ describe('createLocalGatewayClient 本地网关客户端', () => {
       timeoutMs: 5000,
       logger: (...args) => logs.push(args.join(' ')),
     })
-    await assert.rejects(
-      client([{ role: 'user', content: '你好' }]),
-      /网络错误/,
-    )
+    await assert.rejects(client([{ role: 'user', content: '你好' }]), /网络错误/)
     assert.ok(logs.some((l) => l.includes('网络错误')))
   })
 
   it('未提供 logger 时使用默认 console.log 不报错', async () => {
     fetchImpl = async (url: string) => {
-      if (url.includes('/chat/completions'))
-        return jsonRes({ choices: [{ message: { content: '回复' } }] })
+      if (url.includes('/chat/completions')) return jsonRes({ choices: [{ message: { content: '回复' } }] })
       return jsonRes({})
     }
     const client = createLocalGatewayClient({
@@ -306,10 +293,7 @@ describe('acquireLock 互斥锁', () => {
     const dir = uniqueLockDir()
     try {
       mkdirSync(dir)
-      writeFileSync(
-        join(dir, 'owner.json'),
-        JSON.stringify({ pid: 12345, ts: Date.now() - 120_000 }),
-      )
+      writeFileSync(join(dir, 'owner.json'), JSON.stringify({ pid: 12345, ts: Date.now() - 120_000 }))
       const logs: string[] = []
       const acquired = await acquireLock(dir, 0, 60_000, (...args) => logs.push(args.join(' ')))
       assert.equal(acquired, true)
@@ -358,7 +342,7 @@ describe('acquireLock 互斥锁', () => {
     const dir = uniqueLockDir()
     try {
       mkdirSync(dir)
-      const bomJson = '\uFEFF' + JSON.stringify({ pid: 12345, ts: Date.now() - 120_000 })
+      const bomJson = `\uFEFF${JSON.stringify({ pid: 12345, ts: Date.now() - 120_000 })}`
       writeFileSync(join(dir, 'owner.json'), bomJson)
       const logs: string[] = []
       const acquired = await acquireLock(dir, 0, 60_000, (...args) => logs.push(args.join(' ')))
@@ -373,10 +357,7 @@ describe('acquireLock 互斥锁', () => {
     const dir = uniqueLockDir()
     try {
       mkdirSync(dir)
-      writeFileSync(
-        join(dir, 'owner.json'),
-        JSON.stringify({ pid: 12345, ts: 'not-a-number' }),
-      )
+      writeFileSync(join(dir, 'owner.json'), JSON.stringify({ pid: 12345, ts: 'not-a-number' }))
       const acquired = await acquireLock(dir, 0, 60_000, silentLogger)
       assert.equal(acquired, false)
     } finally {
@@ -390,15 +371,11 @@ describe('acquireLock 互斥锁', () => {
       mkdirSync(dir)
       writeFileSync(join(dir, 'owner.json'), JSON.stringify({ pid: 12345, ts: Date.now() }))
       // mock setTimeout：在 sleep 回调中删除锁目录，模拟其他进程释放锁
-      mock.method(
-        globalThis,
-        'setTimeout',
-        ((fn: (...args: unknown[]) => void) => {
-          rmSync(dir, { recursive: true, force: true })
-          if (typeof fn === 'function') fn()
-          return {} as unknown
-        }) as unknown as typeof globalThis.setTimeout,
-      )
+      mock.method(globalThis, 'setTimeout', ((fn: (...args: unknown[]) => void) => {
+        rmSync(dir, { recursive: true, force: true })
+        if (typeof fn === 'function') fn()
+        return {} as unknown
+      }) as unknown as typeof globalThis.setTimeout)
       const logs: string[] = []
       const acquired = await acquireLock(dir, 10_000, 60_000, (...args) => logs.push(args.join(' ')))
       assert.equal(acquired, true)

@@ -24,7 +24,12 @@ import type { ContentBlock, CtaConfig, LinkItem, FaqItem } from '../src/client.j
 import * as utils from '../src/utils.js'
 
 // 引用类型避免未使用告警
-const _types: { ContentBlock: ContentBlock | null; CtaConfig: CtaConfig | null; LinkItem: LinkItem | null; FaqItem: FaqItem | null } = {
+const _types: {
+  ContentBlock: ContentBlock | null
+  CtaConfig: CtaConfig | null
+  LinkItem: LinkItem | null
+  FaqItem: FaqItem | null
+} = {
   ContentBlock: null,
   CtaConfig: null,
   LinkItem: null,
@@ -355,7 +360,10 @@ describe('renderFaqSection', () => {
   })
 
   it('过滤缺少 q 或 a 的条目', () => {
-    const faq = [{ q: '', a: '答案' }, { q: '问题', a: '' }] as unknown as FaqItem[]
+    const faq = [
+      { q: '', a: '答案' },
+      { q: '问题', a: '' },
+    ] as unknown as FaqItem[]
     const html = renderFaqSection(faq)
     // 所有条目均被跳过，不应渲染 details 或 faq-item 条目容器
     assert.ok(!html.includes('<details>'), '不应渲染折叠条目')
@@ -394,15 +402,12 @@ describe('articleJsonLd', () => {
     const json = articleJsonLd(article, site)
     const parsed = JSON.parse(json) as Array<Record<string, unknown>>
     assert.equal(parsed[0]['@type'], 'Article')
-    assert.equal(parsed[0]['headline'], '套餐详解')
-    assert.equal(parsed[0]['url'], 'https://test.example/article/art-1')
+    assert.equal(parsed[0].headline, '套餐详解')
+    assert.equal(parsed[0].url, 'https://test.example/article/art-1')
   })
 
   it('包含 FAQ 时追加 FAQPage', () => {
-    const json = articleJsonLd(
-      { ...article, faq: [{ q: '问题？', a: '答案' }] },
-      site,
-    )
+    const json = articleJsonLd({ ...article, faq: [{ q: '问题？', a: '答案' }] }, site)
     const parsed = JSON.parse(json) as Array<Record<string, unknown>>
     assert.equal(parsed.length, 2)
     assert.equal(parsed[1]['@type'], 'FAQPage')
@@ -449,7 +454,7 @@ describe('productJsonLd', () => {
 
   it('无价格时不包含 offers', () => {
     const ld = productJsonLd({ name: '产品名' })
-    assert.ok(!((ld as Record<string, unknown>).offers), '无价格不应包含 offers')
+    assert.ok(!(ld as Record<string, unknown>).offers, '无价格不应包含 offers')
   })
 })
 
@@ -462,8 +467,8 @@ describe('faqJsonLd', () => {
   it('生成 FAQPage 结构化数据', () => {
     const ld = faqJsonLd([{ q: '问题一？', a: '答案一' }])
     assert.equal(ld!['@type'], 'FAQPage')
-    assert.ok(Array.isArray(ld!['mainEntity']))
-    assert.equal(ld!['mainEntity'].length, 1)
+    assert.ok(Array.isArray(ld!.mainEntity))
+    assert.equal(ld!.mainEntity.length, 1)
   })
 })
 

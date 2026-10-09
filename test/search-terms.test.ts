@@ -106,10 +106,7 @@ describe('fetchSearchConsoleTerms', () => {
       json: () => Promise.resolve({}),
     }))
 
-    await assert.rejects(
-      fetchSearchConsoleTerms('https://example.com', 'token'),
-      /Search Console API 403: Forbidden/,
-    )
+    await assert.rejects(fetchSearchConsoleTerms('https://example.com', 'token'), /Search Console API 403: Forbidden/)
   })
 
   it('API 错误且 resp.text() 抛错时错误消息体降级为空', async () => {
@@ -120,10 +117,7 @@ describe('fetchSearchConsoleTerms', () => {
       json: () => Promise.resolve({}),
     }))
 
-    await assert.rejects(
-      fetchSearchConsoleTerms('https://example.com', 'token'),
-      /Search Console API 500: $/,
-    )
+    await assert.rejects(fetchSearchConsoleTerms('https://example.com', 'token'), /Search Console API 500: $/)
   })
 
   it('rows 为空数组时返回空列表', async () => {

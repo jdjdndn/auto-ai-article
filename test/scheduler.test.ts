@@ -61,9 +61,7 @@ interface MockDrizzleDb {
   update(): unknown
 }
 
-function mockDrizzleDb(
-  opts: { pendingSeeds?: Seed[]; insertError?: Error; selectError?: Error } = {},
-): MockDrizzleDb {
+function mockDrizzleDb(opts: { pendingSeeds?: Seed[]; insertError?: Error; selectError?: Error } = {}): MockDrizzleDb {
   const pendingSeeds = opts.pendingSeeds || []
   const queryable = {
     from: () => queryable,
@@ -92,15 +90,15 @@ function mockDrizzleDb(
 }
 
 interface MockNitroApp {
-  hooks: { hook(name: string, fn: Function): void }
-  _hooks: Record<string, Function>
+  hooks: { hook(name: string, fn: (...args: unknown[]) => unknown): void }
+  _hooks: Record<string, (...args: unknown[]) => unknown>
 }
 
 function mockNitroApp(): MockNitroApp {
-  const hooks: Record<string, Function> = {}
+  const hooks: Record<string, (...args: unknown[]) => unknown> = {}
   return {
     hooks: {
-      hook(name: string, fn: Function) {
+      hook(name: string, fn: (...args: unknown[]) => unknown) {
         hooks[name] = fn
       },
     },
@@ -136,9 +134,7 @@ const GOOD_ARTICLE_JSON = JSON.stringify({
 })
 
 // 选题数组 JSON
-const TOPICS_JSON = JSON.stringify([
-  { title: '测试选题', angle: '测试角度', category: '优惠' },
-])
+const TOPICS_JSON = JSON.stringify([{ title: '测试选题', angle: '测试角度', category: '优惠' }])
 
 // ============================================================
 // getNextAlarmTime
@@ -611,7 +607,7 @@ describe('createScheduledPlugin', () => {
       },
     })
     plugin(nitroApp)
-    const result = await nitroApp._hooks['cloudflare:scheduled']({ env: {} })
+    const result = (await nitroApp._hooks['cloudflare:scheduled']({ env: {} })) as { ok: boolean; error: string }
     assert.equal(result.ok, false)
     assert.equal(result.error, 'generate failed')
   })

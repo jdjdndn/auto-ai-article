@@ -32,7 +32,13 @@ function mockFetch(opts: MockOptions = {}): void {
         else signal.addEventListener('abort', () => reject(new Error('The operation was aborted')))
       })
     }
-    return { ok, status, async text() { return text } } as unknown as Response
+    return {
+      ok,
+      status,
+      async text() {
+        return text
+      },
+    } as unknown as Response
   }) as typeof fetch
 }
 

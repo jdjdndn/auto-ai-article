@@ -53,10 +53,7 @@ describe('alerting 告警触发条件', () => {
   })
 
   it('alertOnAllFail 为 false 时不触发全部失败告警', async () => {
-    const res = await checkAndAlert(
-      ctx({ ok: 0, fail: 5, total: 0 }),
-      cfg({ alertOnAllFail: false }),
-    )
+    const res = await checkAndAlert(ctx({ ok: 0, fail: 5, total: 0 }), cfg({ alertOnAllFail: false }))
     assert.equal(res.triggered, false)
     assert.equal(calls.length, 0)
   })
@@ -138,20 +135,14 @@ describe('alerting 全部失败与降级', () => {
   it('webhook 返回 HTTP 错误时降级返回状态码', async () => {
     mockOk = false
     mockStatus = 500
-    const res = await checkAndAlert(
-      ctx({ ok: 1, fail: 9, total: 10 }),
-      cfg(),
-    )
+    const res = await checkAndAlert(ctx({ ok: 1, fail: 9, total: 10 }), cfg())
     assert.equal(res.triggered, true)
     assert.equal(res.message, 'webhook HTTP 500')
   })
 
   it('webhook 抛出异常时降级返回错误信息', async () => {
     mockError = new Error('network down')
-    const res = await checkAndAlert(
-      ctx({ ok: 1, fail: 9, total: 10 }),
-      cfg(),
-    )
+    const res = await checkAndAlert(ctx({ ok: 1, fail: 9, total: 10 }), cfg())
     assert.equal(res.triggered, true)
     assert.equal(res.message, 'webhook 发送失败: network down')
   })

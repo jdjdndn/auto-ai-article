@@ -29,14 +29,7 @@ describe('cli parseArgs 参数解析', () => {
   })
 
   it('解析多个参数组合', () => {
-    const args = parseArgs([
-      'node',
-      'cli.js',
-      '--remote=https://x',
-      '--site=172',
-      '--dry-run',
-      '--target=5',
-    ])
+    const args = parseArgs(['node', 'cli.js', '--remote=https://x', '--site=172', '--dry-run', '--target=5'])
     assert.equal(args.remote, 'https://x')
     assert.equal(args.site, '172')
     assert.equal(args.dryRun, true)
@@ -272,16 +265,13 @@ describe('cli main 远程模式', () => {
   })
 
   it('--remote --site 成功时输出远程结果', async () => {
-    const { stdout, exitCode } = await runMain(
-      ['--remote=https://example.cc', '--site=172', '--remote-key=secret'],
-      {
-        runScheduledGenerate: async () => ({
-          mode: 'remote',
-          reason: '测试原因',
-          pipeline: { ok: 3, fail: 1 },
-        }),
-      },
-    )
+    const { stdout, exitCode } = await runMain(['--remote=https://example.cc', '--site=172', '--remote-key=secret'], {
+      runScheduledGenerate: async () => ({
+        mode: 'remote',
+        reason: '测试原因',
+        pipeline: { ok: 3, fail: 1 },
+      }),
+    })
     assert.equal(exitCode, null)
     const output = stdout.join('\n')
     assert.ok(output.includes('远程模式'))
@@ -293,14 +283,11 @@ describe('cli main 远程模式', () => {
   })
 
   it('--remote --site runScheduledGenerate 抛错时退出码 1', async () => {
-    const { stderr, exitCode } = await runMain(
-      ['--remote=https://example.cc', '--site=172'],
-      {
-        runScheduledGenerate: async () => {
-          throw new Error('远程执行失败')
-        },
+    const { stderr, exitCode } = await runMain(['--remote=https://example.cc', '--site=172'], {
+      runScheduledGenerate: async () => {
+        throw new Error('远程执行失败')
       },
-    )
+    })
     assert.equal(exitCode, 1)
     assert.ok(stderr.join('\n').includes('执行失败'))
   })
@@ -484,15 +471,10 @@ describe('cli main 环境变量与参数映射', () => {
 })
 
 /** 在 execute 内部调用 cloudFallback 并捕获结果（此时 fetch 仍为 mock） */
-function captureAndInvokeFallback(
-  spy: { config: Record<string, unknown> | null; result: unknown },
-  dryRun: boolean,
-) {
+function captureAndInvokeFallback(spy: { config: Record<string, unknown> | null; result: unknown }, dryRun: boolean) {
   return async (_db: unknown, config: unknown): Promise<unknown> => {
     spy.config = config as Record<string, unknown>
-    const cb = (spy.config as Record<string, unknown>).cloudFallback as (
-      ctx: { dryRun: boolean },
-    ) => Promise<unknown>
+    const cb = (spy.config as Record<string, unknown>).cloudFallback as (ctx: { dryRun: boolean }) => Promise<unknown>
     if (cb) spy.result = await cb({ dryRun })
     return { mode: 'cloud', pipeline: emptyPipeline() }
   }

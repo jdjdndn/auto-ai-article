@@ -99,10 +99,7 @@ afterEach(() => {
 
 // —— 默认线上 API mock 工厂 ——
 
-function defaultApi(
-  seeds: Seed[] = [],
-  publishedToday = 0,
-): (url: string, init: unknown) => Promise<Response> {
+function defaultApi(seeds: Seed[] = [], publishedToday = 0): (url: string, init: unknown) => Promise<Response> {
   return async (url, init) => {
     const u = new URL(url)
     const path = u.pathname
@@ -122,8 +119,7 @@ function defaultApi(
     if (path.match(/\/api\/admin\/seeds\/\d+\/fail/) && method === 'POST') return jsonRes({})
     if (path === '/api/admin/articles/batch' && method === 'POST')
       return jsonRes({ total: 1, created: 1, failed: 0, results: [{ id: '1', ok: true }] })
-    if (path === '/api/admin/articles' && method === 'GET')
-      return jsonRes({ list: Array(publishedToday).fill({}) })
+    if (path === '/api/admin/articles' && method === 'GET') return jsonRes({ list: Array(publishedToday).fill({}) })
     if (path === '/api/admin/publish-due' && method === 'POST') return jsonRes({ published: 0 })
     if (path === '/api/admin/run-logs' && method === 'POST') return jsonRes({})
     if (path === '/api/admin/run-daily-generate') return jsonRes({ ok: true, message: 'triggered' })
@@ -489,9 +485,7 @@ describe('runner 运行日志上报', () => {
       return base(url, init)
     }
     const logs: string[] = []
-    const result = await runScheduledGenerate(
-      baseCfg({ logger: (...args: unknown[]) => logs.push(args.join(' ')) }),
-    )
+    const result = await runScheduledGenerate(baseCfg({ logger: (...args: unknown[]) => logs.push(args.join(' ')) }))
     assert.equal(result.mode, 'cloud')
     assert.equal(result.pipeline?.ok, 1)
     assert.ok(logs.some((l) => l.includes('运行日志上报失败')))
@@ -515,9 +509,7 @@ describe('runner 草稿发布', () => {
       return base(url, init)
     }
     const logs: string[] = []
-    const result = await runScheduledGenerate(
-      baseCfg({ logger: (...args: unknown[]) => logs.push(args.join(' ')) }),
-    )
+    const result = await runScheduledGenerate(baseCfg({ logger: (...args: unknown[]) => logs.push(args.join(' ')) }))
     assert.ok(publishDueCalled, '应调用 publish-due API')
     assert.ok(logs.some((l) => l.includes('优先发布到期草稿 2 篇')))
     assert.equal(result.mode, 'cloud')
@@ -632,9 +624,7 @@ describe('runner 标记素材容错', () => {
       return base(url, init)
     }
     const logs: string[] = []
-    const result = await runScheduledGenerate(
-      baseCfg({ logger: (...args: unknown[]) => logs.push(args.join(' ')) }),
-    )
+    const result = await runScheduledGenerate(baseCfg({ logger: (...args: unknown[]) => logs.push(args.join(' ')) }))
     assert.equal(result.mode, 'cloud')
     assert.equal(result.pipeline?.ok, 1)
     assert.ok(logs.some((l) => l.includes('标记素材完成失败')))

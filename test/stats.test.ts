@@ -11,7 +11,15 @@ import {
 
 const logs: RunLogEntry[] = [
   { project: 'p1', provider: 'cf', success: true, wordCount: 800, durationMs: 1000, timestamp: '2026-10-01T08:00:00Z' },
-  { project: 'p1', provider: 'cf', success: false, wordCount: 0, durationMs: 2000, failReason: 'timeout', timestamp: '2026-10-01T09:00:00Z' },
+  {
+    project: 'p1',
+    provider: 'cf',
+    success: false,
+    wordCount: 0,
+    durationMs: 2000,
+    failReason: 'timeout',
+    timestamp: '2026-10-01T09:00:00Z',
+  },
   { project: 'p2', provider: 'or', success: true, wordCount: 900, durationMs: 3000, timestamp: '2026-10-02T08:00:00Z' },
 ]
 
@@ -104,7 +112,15 @@ describe('exportStatsCsv', () => {
 
   it('含逗号值用双引号包裹', () => {
     const logsComma: RunLogEntry[] = [
-      { project: 'p1', provider: 'cf', success: false, wordCount: 0, durationMs: 1000, failReason: 'rate limit, retry exhausted', timestamp: '2026-10-01T08:00:00Z' },
+      {
+        project: 'p1',
+        provider: 'cf',
+        success: false,
+        wordCount: 0,
+        durationMs: 1000,
+        failReason: 'rate limit, retry exhausted',
+        timestamp: '2026-10-01T08:00:00Z',
+      },
     ]
     const csv = exportStatsCsv(aggregateStats(logsComma))
     assert.ok(csv.includes('"rate limit, retry exhausted"'))
@@ -173,7 +189,15 @@ describe('renderStatsHtml', () => {
   it('失败原因 title 属性显示完整原因并截断显示', () => {
     const longReason = 'a'.repeat(60)
     const logsLong: RunLogEntry[] = [
-      { project: 'p1', provider: 'cf', success: false, wordCount: 0, durationMs: 1000, failReason: longReason, timestamp: '2026-10-01T08:00:00Z' },
+      {
+        project: 'p1',
+        provider: 'cf',
+        success: false,
+        wordCount: 0,
+        durationMs: 1000,
+        failReason: longReason,
+        timestamp: '2026-10-01T08:00:00Z',
+      },
     ]
     const html = renderStatsHtml(aggregateStats(logsLong))
     assert.ok(html.includes(`title="${longReason}"`))

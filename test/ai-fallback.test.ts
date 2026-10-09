@@ -127,7 +127,10 @@ describe('extractResponse', () => {
 
   it('空串/纯空白跳过继续尝试后续通道', () => {
     // result.response 为空白 → 跳过；result 为有效字符串 → 返回
-    assert.equal(extractResponse({ result: { response: '   ' }, choices: [{ message: { content: 'fallback' } }] }), 'fallback')
+    assert.equal(
+      extractResponse({ result: { response: '   ' }, choices: [{ message: { content: 'fallback' } }] }),
+      'fallback',
+    )
   })
 
   it('null 返回空串', () => {
@@ -259,15 +262,33 @@ describe('FallbackChain', () => {
   })
 
   it('第一个失败切第二个成功', async () => {
-    const p1 = { name: 'p1', try: async () => { throw new Error('p1 fail') }, getBadModels: () => [] }
+    const p1 = {
+      name: 'p1',
+      try: async () => {
+        throw new Error('p1 fail')
+      },
+      getBadModels: () => [],
+    }
     const p2 = { name: 'p2', try: async () => 'from-p2', getBadModels: () => [] }
     const chain = new FallbackChain([p1, p2])
     assert.equal(await chain.run(msgs), 'from-p2')
   })
 
   it('全部失败时抛出聚合错误', async () => {
-    const p1 = { name: 'p1', try: async () => { throw new Error('p1 fail') }, getBadModels: () => [] }
-    const p2 = { name: 'p2', try: async () => { throw new Error('p2 fail') }, getBadModels: () => [] }
+    const p1 = {
+      name: 'p1',
+      try: async () => {
+        throw new Error('p1 fail')
+      },
+      getBadModels: () => [],
+    }
+    const p2 = {
+      name: 'p2',
+      try: async () => {
+        throw new Error('p2 fail')
+      },
+      getBadModels: () => [],
+    }
     const chain = new FallbackChain([p1, p2])
     await assert.rejects(
       () => chain.run(msgs),
@@ -295,7 +316,13 @@ describe('FallbackChain', () => {
   })
 
   it('append 在链尾追加并返回 this', async () => {
-    const p1 = { name: 'p1', try: async () => { throw new Error('fail') }, getBadModels: () => [] }
+    const p1 = {
+      name: 'p1',
+      try: async () => {
+        throw new Error('fail')
+      },
+      getBadModels: () => [],
+    }
     const p2 = { name: 'p2', try: async () => 'from-p2', getBadModels: () => [] }
     const chain = new FallbackChain([p1])
     const ret = chain.append(p2)
@@ -305,7 +332,13 @@ describe('FallbackChain', () => {
 
   it('自定义 logFn 被调用', async () => {
     const calls: string[] = []
-    const p1 = { name: 'p1', try: async () => { throw new Error('fail') }, getBadModels: () => [] }
+    const p1 = {
+      name: 'p1',
+      try: async () => {
+        throw new Error('fail')
+      },
+      getBadModels: () => [],
+    }
     const p2 = { name: 'p2', try: async () => 'ok', getBadModels: () => [] }
     const chain = new FallbackChain([p1, p2], (...args: unknown[]) => calls.push(args.join(' ')))
     await chain.run(msgs)
@@ -349,10 +382,13 @@ describe('CfBindingProvider', () => {
       },
     }
     const provider = new CfBindingProvider({ binding, models: testModels })
-    await assert.rejects(() => provider.try(msgs), (err: Error) => {
-      assert.ok(err.message.includes('CF'))
-      return true
-    })
+    await assert.rejects(
+      () => provider.try(msgs),
+      (err: Error) => {
+        assert.ok(err.message.includes('CF'))
+        return true
+      },
+    )
   })
 
   it('quota_exceeded 记录后所有模型不可用', async () => {
@@ -364,10 +400,13 @@ describe('CfBindingProvider', () => {
     const provider = new CfBindingProvider({ binding, models: testModels })
     await assert.rejects(() => provider.try(msgs))
     // 第二次调用：所有模型已被记为 bad
-    await assert.rejects(() => provider.try(msgs), (err: Error) => {
-      assert.ok(err.message.includes('不可用') || err.message.includes('失败'))
-      return true
-    })
+    await assert.rejects(
+      () => provider.try(msgs),
+      (err: Error) => {
+        assert.ok(err.message.includes('不可用') || err.message.includes('失败'))
+        return true
+      },
+    )
   })
 
   it('finish_reason=length 视为失败切换', async () => {
@@ -451,8 +490,16 @@ describe('CfBindingProvider', () => {
 
   it('自定义 logFn 被调用', async () => {
     const calls: string[] = []
-    const binding = { async run() { return { result: { response: 'ok' } } } }
-    const provider = new CfBindingProvider({ binding, models: testModels, logFn: (...a: unknown[]) => calls.push(a.join(' ')) })
+    const binding = {
+      async run() {
+        return { result: { response: 'ok' } }
+      },
+    }
+    const provider = new CfBindingProvider({
+      binding,
+      models: testModels,
+      logFn: (...a: unknown[]) => calls.push(a.join(' ')),
+    })
     await provider.try(msgs)
     assert.ok(calls.length > 0)
   })
@@ -542,10 +589,13 @@ describe('LocalAiProvider', () => {
   it('HTTP 错误时抛错', async () => {
     fetchImpl = async () => new Response('not found', { status: 404 })
     const provider = new LocalAiProvider({ baseUrl: 'http://localhost:11434' })
-    await assert.rejects(() => provider.try(msgs), (err: Error) => {
-      assert.ok(err.message.includes('404'))
-      return true
-    })
+    await assert.rejects(
+      () => provider.try(msgs),
+      (err: Error) => {
+        assert.ok(err.message.includes('404'))
+        return true
+      },
+    )
   })
 
   it('空内容时抛错', async () => {
@@ -602,10 +652,13 @@ describe('createFallbackClient', () => {
       models: testModels,
       timeoutMs: 1000,
     })
-    await assert.rejects(() => client(msgs), (err: Error) => {
-      assert.ok(err.message.includes('所有模型'))
-      return true
-    })
+    await assert.rejects(
+      () => client(msgs),
+      (err: Error) => {
+        assert.ok(err.message.includes('所有模型'))
+        return true
+      },
+    )
   })
 
   it('quota_exceeded 记录到 quotaExhausted', async () => {
@@ -763,7 +816,9 @@ describe('createFallbackClient', () => {
 
   it('badModelStore load 抛错时从空开始', async () => {
     const store: BadModelStore = {
-      load: () => { throw new Error('read fail') },
+      load: () => {
+        throw new Error('read fail')
+      },
       save: () => {},
     }
     fetchImpl = fetchByModel({ 'model-a': { result: { response: 'success-a' } } })
@@ -780,7 +835,9 @@ describe('createFallbackClient', () => {
   it('badModelStore save 抛错时不影响主流程', async () => {
     const store: BadModelStore = {
       load: () => null,
-      save: () => { throw new Error('write fail') },
+      save: () => {
+        throw new Error('write fail')
+      },
     }
     fetchImpl = fetchByModel({
       'model-a': new Response('HTTP 500: server error', { status: 500 }),
@@ -887,10 +944,13 @@ describe('createFallbackClient', () => {
       timeoutMs: 1000,
       badModelStore: store,
     })
-    await assert.rejects(() => client(msgs), (err: Error) => {
-      assert.ok(err.message.includes('不可用'))
-      return true
-    })
+    await assert.rejects(
+      () => client(msgs),
+      (err: Error) => {
+        assert.ok(err.message.includes('不可用'))
+        return true
+      },
+    )
   })
 
   it('fetch 抛 TimeoutError 分类为 timeout', async () => {
@@ -1061,10 +1121,13 @@ describe('createOpenRouterClient', () => {
   it('所有模型失败时抛聚合错误', async () => {
     fetchImpl = async () => new Response('HTTP 500: server error', { status: 500 })
     const client = createOpenRouterClient({ apiKey: 'key', models: ['m1', 'm2'], timeoutMs: 1000 })
-    await assert.rejects(() => client(msgs), (err: Error) => {
-      assert.ok(err.message.includes('OpenRouter'))
-      return true
-    })
+    await assert.rejects(
+      () => client(msgs),
+      (err: Error) => {
+        assert.ok(err.message.includes('OpenRouter'))
+        return true
+      },
+    )
   })
 
   it('空内容视为失败切换', async () => {
@@ -1084,7 +1147,12 @@ describe('createOpenRouterClient', () => {
       capturedUrl = url
       return jsonRes({ choices: [{ message: { content: 'ok' } }] })
     }
-    const client = createOpenRouterClient({ apiKey: 'key', baseUrl: 'https://custom.or/v1//', models: ['m1'], timeoutMs: 1000 })
+    const client = createOpenRouterClient({
+      apiKey: 'key',
+      baseUrl: 'https://custom.or/v1//',
+      models: ['m1'],
+      timeoutMs: 1000,
+    })
     await client(msgs)
     assert.ok(capturedUrl.startsWith('https://custom.or/v1/chat/completions'))
   })
@@ -1117,14 +1185,22 @@ describe('createOpenRouterClient', () => {
 // ============================================================
 describe('createFallbackChain', () => {
   it('只有 binding 时链含一个 CfBindingProvider', async () => {
-    const binding = { async run() { return { result: { response: 'cf ok' } } } }
+    const binding = {
+      async run() {
+        return { result: { response: 'cf ok' } }
+      },
+    }
     const chain = createFallbackChain({ binding, models: testModels })
     assert.equal(await chain.run(msgs), 'cf ok')
   })
 
   it('local + binding：local 优先', async () => {
     fetchImpl = async () => jsonRes({ choices: [{ message: { content: 'local ok' } }] })
-    const binding = { async run() { return { result: { response: 'cf ok' } } } }
+    const binding = {
+      async run() {
+        return { result: { response: 'cf ok' } }
+      },
+    }
     const chain = createFallbackChain({
       binding,
       models: testModels,
@@ -1135,7 +1211,11 @@ describe('createFallbackChain', () => {
 
   it('binding 失败 + openrouter 兜底', async () => {
     fetchImpl = async () => jsonRes({ choices: [{ message: { content: 'or ok' } }] })
-    const binding = { async run() { throw new Error('cf fail') } }
+    const binding = {
+      async run() {
+        throw new Error('cf fail')
+      },
+    }
     const chain = createFallbackChain({
       binding,
       models: testModels,
@@ -1146,7 +1226,11 @@ describe('createFallbackChain', () => {
 
   it('local + binding + openrouter 全链', async () => {
     fetchImpl = async () => jsonRes({ choices: [{ message: { content: 'or ok' } }] })
-    const binding = { async run() { throw new Error('cf fail') } }
+    const binding = {
+      async run() {
+        throw new Error('cf fail')
+      },
+    }
     const chain = createFallbackChain({
       binding,
       models: testModels,
@@ -1159,7 +1243,11 @@ describe('createFallbackChain', () => {
   })
 
   it('返回 FallbackChain 实例，可 prepend/append', () => {
-    const binding = { async run() { return { result: { response: 'ok' } } } }
+    const binding = {
+      async run() {
+        return { result: { response: 'ok' } }
+      },
+    }
     const chain = createFallbackChain({ binding, models: testModels })
     assert.ok(chain instanceof FallbackChain)
     const extra = { name: 'extra', try: async () => 'x', getBadModels: () => [] }
@@ -1170,7 +1258,11 @@ describe('createFallbackChain', () => {
 
 describe('createBindingFallbackClient', () => {
   it('返回 AiClient 函数', async () => {
-    const binding = { async run() { return { result: { response: 'cf ok' } } } }
+    const binding = {
+      async run() {
+        return { result: { response: 'cf ok' } }
+      },
+    }
     const client = createBindingFallbackClient({ binding, models: testModels })
     assert.equal(typeof client, 'function')
     assert.equal(await client(msgs), 'cf ok')
@@ -1178,7 +1270,11 @@ describe('createBindingFallbackClient', () => {
 
   it('local 优先于 binding', async () => {
     fetchImpl = async () => jsonRes({ choices: [{ message: { content: 'local ok' } }] })
-    const binding = { async run() { return { result: { response: 'cf ok' } } } }
+    const binding = {
+      async run() {
+        return { result: { response: 'cf ok' } }
+      },
+    }
     const client = createBindingFallbackClient({
       binding,
       models: testModels,
@@ -1261,17 +1357,25 @@ describe('createAiClient', () => {
   it('openai HTTP 错误时抛错', async () => {
     fetchImpl = async () => new Response('forbidden', { status: 403 })
     const client = createAiClient({ openai: { apiKey: 'key' } })
-    await assert.rejects(() => client(msgs), (err: Error) => {
-      assert.ok(err.message.includes('403'))
-      return true
-    })
+    await assert.rejects(
+      () => client(msgs),
+      (err: Error) => {
+        assert.ok(err.message.includes('403'))
+        return true
+      },
+    )
   })
 
   it('无配置时抛错', () => {
-    assert.throws(() => createAiClient({}), (err: Error) => {
-      assert.ok(err.message.includes('cloudflare') || err.message.includes('openrouter') || err.message.includes('openai'))
-      return true
-    })
+    assert.throws(
+      () => createAiClient({}),
+      (err: Error) => {
+        assert.ok(
+          err.message.includes('cloudflare') || err.message.includes('openrouter') || err.message.includes('openai'),
+        )
+        return true
+      },
+    )
   })
 
   it('cloudflare + openrouter：CF 成功时不回退', async () => {

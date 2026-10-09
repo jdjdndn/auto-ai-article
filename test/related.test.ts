@@ -19,7 +19,12 @@ describe('computeRelatedArticles', () => {
   })
 
   it('limit 生效', () => {
-    const cands = Array.from({ length: 10 }, (_, i) => ({ id: `id${i}`, title: '联通套餐攻略', category: '号卡', tags: ['联通'] }))
+    const cands = Array.from({ length: 10 }, (_, i) => ({
+      id: `id${i}`,
+      title: '联通套餐攻略',
+      category: '号卡',
+      tags: ['联通'],
+    }))
     assert.equal(computeRelatedArticles(article, cands, { limit: 3 }).length, 3)
   })
 

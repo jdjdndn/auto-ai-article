@@ -28,9 +28,7 @@ function makeSeed(id: number, raw: string): Seed {
   }
 }
 
-function mockDb(
-  seeds: Seed[],
-): PipelineDB & { inserted: GeneratedArticle[]; failed: { id: number; error: string }[] } {
+function mockDb(seeds: Seed[]): PipelineDB & { inserted: GeneratedArticle[]; failed: { id: number; error: string }[] } {
   const inserted: GeneratedArticle[] = []
   const failed: { id: number; error: string }[] = []
   return {
@@ -111,8 +109,7 @@ function onlineFetch(models: string[] = ['deepseek-chat'], articleJson = GOOD_AR
   return async (url: string): Promise<Response> => {
     if (url.includes('/health')) return jsonRes({ status: 'ok', browser: 'connected' })
     if (url.includes('/models')) return jsonRes({ data: models.map((id) => ({ id })) })
-    if (url.includes('/chat/completions'))
-      return jsonRes({ choices: [{ message: { content: articleJson } }] })
+    if (url.includes('/chat/completions')) return jsonRes({ choices: [{ message: { content: articleJson } }] })
     return jsonRes({})
   }
 }
@@ -140,8 +137,7 @@ function offlineWithCloudAiFetch() {
   return async (url: string): Promise<Response> => {
     if (url.includes('/health')) return jsonRes({ status: 'degraded' })
     if (url.includes('/models')) return jsonRes({ data: [] })
-    if (url.includes('/chat/completions'))
-      return jsonRes({ choices: [{ message: { content: GOOD_ARTICLE_JSON } }] })
+    if (url.includes('/chat/completions')) return jsonRes({ choices: [{ message: { content: GOOD_ARTICLE_JSON } }] })
     return jsonRes({})
   }
 }
@@ -433,8 +429,7 @@ describe('executor 自愈拉起', () => {
         return jsonRes({ status: 'ok', browser: 'connected' })
       }
       if (url.includes('/models')) return jsonRes({ data: [{ id: 'deepseek-chat' }] })
-      if (url.includes('/chat/completions'))
-        return jsonRes({ choices: [{ message: { content: GOOD_ARTICLE_JSON } }] })
+      if (url.includes('/chat/completions')) return jsonRes({ choices: [{ message: { content: GOOD_ARTICLE_JSON } }] })
       return jsonRes({})
     }
     const result = await execute(mockDb([makeSeed(1, '这是一段足够长的素材内容用于测试')]), {
@@ -465,8 +460,7 @@ describe('executor 自愈拉起', () => {
         return jsonRes({ status: 'ok', browser: 'connected' })
       }
       if (url.includes('/models')) return jsonRes({ data: [{ id: 'deepseek-chat' }] })
-      if (url.includes('/chat/completions'))
-        return jsonRes({ choices: [{ message: { content: GOOD_ARTICLE_JSON } }] })
+      if (url.includes('/chat/completions')) return jsonRes({ choices: [{ message: { content: GOOD_ARTICLE_JSON } }] })
       return jsonRes({})
     }
     const result = await execute(mockDb([makeSeed(1, '这是一段足够长的素材内容用于测试')]), {
