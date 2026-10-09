@@ -196,6 +196,30 @@ cd auto-ai-article && npm run sync-vendor
 
 ## 快速开始
 
+### 10 分钟上手（本地试跑）
+
+```bash
+# 1. 安装
+npm install && npm run build
+
+# 2. 配置环境变量（至少配一个 AI 提供方）
+cp .env.example .env
+#   编辑 .env，填入 OPENROUTER_API_KEY（推荐，免费额度大）
+#   获取：https://openrouter.ai/
+
+# 3. 校验配置（不执行，只检查必需项是否配齐）
+node -e "require('./dist/cli').runCli(['--check'])"
+
+# 4. 本地试跑（dry-run，只生成不入库）
+node -e "require('./dist/cli').runCli(['--dry-run','--target=1'])"
+#   预期输出：[executor] mode=local ... 生成 1 篇文章（不入库）
+
+# 5. 失败排查
+#   - "未配置任何 AI 提供方" → .env 没配 key，回到步骤 2
+#   - "OpenRouter apiKey missing" → key 拼写错误或未生效
+#   - 超时 → 本地网关未启动，配 OPENROUTER_API_KEY 走云端
+```
+
 ### 0. 定时调度（推荐方式）
 
 使用 Cloudflare Durable Objects Alarms，每天固定时间触发，无需 cron triggers：

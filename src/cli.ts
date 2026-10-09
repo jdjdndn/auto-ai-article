@@ -17,6 +17,7 @@ import {
   type SeedInput,
   type AlertConfig,
 } from './index.js'
+import { validateConfig } from './config-check.js'
 
 // —— 参数解析 ——
 
@@ -66,6 +67,7 @@ export function usage() {
   --alert-webhook=<url>  告警 webhook URL（飞书/钉钉/通用）
   --alert-rate=<n>       告警阈值：成功率低于此值触发（默认 0.6）
   --dry-run             只生成不入库
+  --check               只校验配置不执行，打印结果后退出
   --help                显示帮助
 
 示例：
@@ -78,6 +80,23 @@ export function usage() {
   # 本地生成 + 告警
   ai-article-pipeline --gateway=http://localhost:3456/v1 --alert-webhook=https://open.feishu.cn/open-apis/bot/v2/hook/xxx --alert-rate=0.6
 `)
+}
+
+// —— 启动前配置校验：从 args + env 构建扁平配置对象 ——
+
+export function buildCheckConfig(args: Record<string, string | boolean>): Record<string, unknown> {
+  return {
+    OPENROUTER_API_KEY: String(args['openrouter-key'] || process.env.OPENROUTER_API_KEY || ''),
+    DASHSCOPE_API_KEY: process.env.DASHSCOPE_API_KEY || '',
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
+    MISTRAL_API_KEY: process.env.MISTRAL_API_KEY || '',
+    CEREBRAS_API_KEY: process.env.CEREBRAS_API_KEY || '',
+    LLM_API_KEY: process.env.LLM_API_KEY || '',
+    AI_API_KEY: String(args['api-key'] || process.env.AI_API_KEY || ''),
+    LOCAL_GATEWAY_URL: String(args.gateway || process.env.LOCAL_GATEWAY_URL || 'http://localhost:3456/v1'),
+    ALERT_WEBHOOK_URL: String(args['alert-webhook'] || process.env.ALERT_WEBHOOK_URL || ''),
+    ALERT_MIN_SUCCESS_RATE: args['alert-rate'] ? String(args['alert-rate']) : process.env.ALERT_MIN_SUCCESS_RATE || '',
+  }
 }
 
 // —— 简易内存 DB（CLI 演示用，实际使用需替换）——
@@ -137,6 +156,21 @@ export async function main() {
   if (args.help) {
     usage()
     process.exit(0)
+  }
+
+  if (args.check) {
+    const result = validateConfig(buildCheckConfig(args))
+    if (result.errors.length) {
+      console.error('配置校验失败：')
+      for (const e of result.errors) console.error(`  [error] ${e}`)
+    } else {
+      console.log('配置校验通过')
+    }
+    if (result.warnings.length) {
+      console.log('警告：')
+      for (const w of result.warnings) console.log(`  [warn] ${w}`)
+    }
+    process.exit(result.valid ? 0 : 1)
   }
 
   // —— 告警配置 ——
@@ -228,6 +262,13 @@ export async function main() {
       const data: any = await res.json().catch(() => null)
       return { ok: true, message: data?.message || '云端兜底已执行' }
     }
+  }
+
+  const checkResult = validateConfig(buildCheckConfig(args))
+  if (checkResult.errors.length) {
+    console.error('配置校验失败，启动中止：')
+    for (const e of checkResult.errors) console.error(`  [error] ${e}`)
+    process.exit(1)
   }
 
   const db = createDemoDB()
