@@ -52,9 +52,7 @@ async function checkAndAlert(ctx, config) {
     const shouldAlert = rate < minRate || (alertOnAllFail && ctx.fail > 0 && ctx.ok === 0);
     if (!shouldAlert)
         return { triggered: false };
-    const reason = rate < minRate
-        ? `成功率 ${Math.round(rate * 100)}% 低于阈值 ${Math.round(minRate * 100)}%`
-        : '全部失败';
+    const reason = rate < minRate ? `成功率 ${Math.round(rate * 100)}% 低于阈值 ${Math.round(minRate * 100)}%` : '全部失败';
     const channel = config.channel === 'auto' || !config.channel ? detectChannel(config.webhookUrl) : config.channel;
     const text = formatMessage(ctx, config);
     const payload = buildPayload(channel, text);

@@ -121,7 +121,15 @@ export {
   getQuotaExhaustedModels,
   extractResponse,
 } from './ai-fallback.js'
-export type { AiModel, FallbackConfig, FallbackResult, FallbackReason, UnifiedAiConfig, BindingFallbackConfig, BadModelStore } from './ai-fallback.js'
+export type {
+  AiModel,
+  FallbackConfig,
+  FallbackResult,
+  FallbackReason,
+  UnifiedAiConfig,
+  BindingFallbackConfig,
+  BadModelStore,
+} from './ai-fallback.js'
 
 // AI 配置唯一事实源（模型链 / 备用提供方 / 站点默认模型）
 export { FALLBACK_PROVIDERS, SITE_DEFAULT_MODELS, getSiteDefaultModel } from './ai-config.js'

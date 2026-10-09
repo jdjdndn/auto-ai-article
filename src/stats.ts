@@ -119,10 +119,7 @@ export function renderStatsMarkdown(summary: StatSummary): string {
  * 将 RunLogInput（管线运行日志）转换为 RunLogEntry（统计聚合输入）。
  * 缺失字段以合理默认值填充。
  */
-export function fromRunLogInput(
-  input: import('./types.js').RunLogInput,
-  project = 'unknown',
-): RunLogEntry {
+export function fromRunLogInput(input: import('./types.js').RunLogInput, project = 'unknown'): RunLogEntry {
   return {
     project,
     provider: input.model ?? 'unknown',
@@ -263,9 +260,5 @@ export function renderStatsHtml(summary: StatSummary, title = 'AI 文章生成�
 }
 
 function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }

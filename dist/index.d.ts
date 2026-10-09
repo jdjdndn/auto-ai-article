@@ -17,7 +17,7 @@ export type { RelatedCandidate, RelatedOptions } from './related.js';
 export { ArticleScheduler, startScheduler, getNextAlarmTime, initDoAlarm, rescheduleDoAlarm, applyWorkerEnv, createDailyAlarmPlugin, createScheduledPlugin, } from './scheduler.js';
 export type { SchedulerConfig, DailyAlarmPluginOptions, ScheduledPluginOptions } from './scheduler.js';
 export { createFallbackClient, createCloudflareAiClient, createAiClient, createBindingFallbackClient, createFallbackChain, type AiProvider, FallbackChain, CfBindingProvider, OpenRouterProvider, LocalAiProvider, createOpenRouterClient, getRecommendedModels, FREE_TEXT_MODELS, OPENROUTER_FREE_MODELS, resetQuotaState, getQuotaExhaustedModels, extractResponse, } from './ai-fallback.js';
-export type { AiModel, FallbackConfig, FallbackResult, FallbackReason, UnifiedAiConfig, BindingFallbackConfig, BadModelStore } from './ai-fallback.js';
+export type { AiModel, FallbackConfig, FallbackResult, FallbackReason, UnifiedAiConfig, BindingFallbackConfig, BadModelStore, } from './ai-fallback.js';
 export { FALLBACK_PROVIDERS, SITE_DEFAULT_MODELS, getSiteDefaultModel } from './ai-config.js';
 export type { FallbackProvider } from './ai-config.js';
 export { scoreArticle } from './article-quality.js';

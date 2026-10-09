@@ -218,9 +218,5 @@ function renderStatsHtml(summary, title = 'AI 文章生成运营面板') {
 </html>`;
 }
 function escapeHtml(s) {
-    return s
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }

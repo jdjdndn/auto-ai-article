@@ -143,7 +143,7 @@ async function main() {
   const alert: AlertConfig | undefined = args['alert-webhook']
     ? {
         webhookUrl: String(args['alert-webhook']),
-        minSuccessRate: parseFloat(String(args['alert-rate'] || '0.6')),
+        minSuccessRate: Number.parseFloat(String(args['alert-rate'] || '0.6')),
       }
     : undefined
 

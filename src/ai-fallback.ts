@@ -548,14 +548,16 @@ export function createFallbackChain(config: BindingFallbackConfig): FallbackChai
   }
 
   // 2. CF binding
-  providers.push(new CfBindingProvider({
-    binding: config.binding,
-    models: config.models,
-    maxDepth: config.maxDepth,
-    maxTokens: config.maxTokens,
-    timeoutMs: config.timeoutMs,
-    logFn: (...args: unknown[]) => console.log(new Date().toISOString(), '[ai-cf]', ...args),
-  }))
+  providers.push(
+    new CfBindingProvider({
+      binding: config.binding,
+      models: config.models,
+      maxDepth: config.maxDepth,
+      maxTokens: config.maxTokens,
+      timeoutMs: config.timeoutMs,
+      logFn: (...args: unknown[]) => console.log(new Date().toISOString(), '[ai-cf]', ...args),
+    }),
+  )
 
   // 3. OpenRouter（兜底）
 

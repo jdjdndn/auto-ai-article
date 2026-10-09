@@ -128,7 +128,7 @@ async function main() {
     const alert = args['alert-webhook']
         ? {
             webhookUrl: String(args['alert-webhook']),
-            minSuccessRate: parseFloat(String(args['alert-rate'] || '0.6')),
+            minSuccessRate: Number.parseFloat(String(args['alert-rate'] || '0.6')),
         }
         : undefined;
     // —— 远程模式：通过 HTTP API 触发远程站点生成 ——
