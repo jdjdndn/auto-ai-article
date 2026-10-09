@@ -67,7 +67,8 @@
     "test:watch": "vitest",
     "lint": "biome check src",
     "format": "biome check --write src",
-    "sync-vendor": "npm run build && node sync-vendor.cjs",
+    "sync-vendor": "npm run build",
+    "postbuild": "node sync-submodules.cjs",
     "release": "node release.cjs",
     "bench": "npm run build && node bench/benchmark.mjs",
     "prepublishOnly": "npm run build"

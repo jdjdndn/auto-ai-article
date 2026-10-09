@@ -7,31 +7,32 @@
  */
 const fs = require('fs')
 const path = require('path')
+const PKG = require('./package.json')
+const EXCLUDE = (() => {
+  const arg = process.argv.find((a) => a.startsWith('--exclude='))
+  return arg ? arg.slice(9).split(',').map((s) => s.trim()).filter(Boolean) : []
+})()
 
 const SRC = path.join(__dirname, 'dist')
-const ROOT = path.resolve(__dirname, '..')
-const PKG = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'))
-const EXCLUDE_ARG = process.argv.find((a) => a.startsWith('--exclude='))
-const EXCLUDE = EXCLUDE_ARG ? EXCLUDE_ARG.split('=')[1].split(',').map((s) => s.trim()) : []
-
+const ROOT = path.resolve(__dirname, '../..')
 const TARGETS = [
-  ['号卡/172', 'vendor/ai-article-pipeline'],
-  ['号卡/hm', 'vendor/ai-article-pipeline'],
-  ['号卡/yk', 'vendor/ai-article-pipeline'],
-  ['号卡/kd', 'vendor/ai-article-pipeline'],
-  ['号卡/hk', 'vendor/ai-article-pipeline'],
-  ['号卡/ksj', 'vendor/ai-article-pipeline'],
-  ['号卡/gc', 'vendor/ai-article-pipeline'],
-  ['信用卡/kahe', 'vendor/ai-article-pipeline'],
-  ['信用卡/suishou', 'vendor/ai-article-pipeline'],
-  ['信用卡/zhangshang', 'vendor/ai-article-pipeline'],
-  ['随身wifi/chaoneng-wifi', 'vendor/ai-article-pipeline'],
-  ['随身wifi/feilimao-wifi', 'vendor/ai-article-pipeline'],
-  ['随身wifi/gexing-wifi', 'vendor/ai-article-pipeline'],
-  ['随身wifi/liantong-wifi', 'vendor/ai-article-pipeline'],
+  ['172', 'vendor/ai-article-pipeline'],
+  ['hm', 'vendor/ai-article-pipeline'],
+  ['yk', 'vendor/ai-article-pipeline'],
+  ['kd', 'vendor/ai-article-pipeline'],
+  ['hk', 'vendor/ai-article-pipeline'],
+  ['ksj', 'vendor/ai-article-pipeline'],
+  ['gc', 'vendor/ai-article-pipeline'],
+  ['kahe', 'vendor/ai-article-pipeline'],
+  ['suishou', 'vendor/ai-article-pipeline'],
+  ['zhangshang', 'vendor/ai-article-pipeline'],
+  ['chaoneng-wifi', 'vendor/ai-article-pipeline'],
+  ['feilimao-wifi', 'vendor/ai-article-pipeline'],
+  ['gexing-wifi', 'vendor/ai-article-pipeline'],
+  ['liantong-wifi', 'vendor/ai-article-pipeline'],
   ['article-site', 'vendor/ai-article-pipeline'],
-  ['GitHub自动文章/template', 'vendor/ai-article-pipeline'],
-  ['seo-optimizer', 'vendor/ai-article-pipeline'],
+  ['github-auto-article/template', 'vendor/ai-article-pipeline'],
+  ['_share/seo-optimizer', 'vendor/ai-article-pipeline'],
 ]
 
 const VENDOR_PKG = {
